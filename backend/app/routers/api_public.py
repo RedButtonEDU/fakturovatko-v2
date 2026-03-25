@@ -42,7 +42,7 @@ async def list_releases():
                 slug=str(rel.get("slug") or ""),
                 title=str(rel.get("title") or rel.get("name") or ""),
                 price=float(rel["price"]) if rel.get("price") is not None else None,
-                state=str(rel.get("state") or ""),
+                state=str(rel.get("state_name") or rel.get("state") or ""),
                 secret=bool(rel.get("secret")) if rel.get("secret") is not None else False,
             )
         )

@@ -31,11 +31,15 @@ async def fetch_releases(account: str, event_slug: str, api_key: str) -> list[di
     for rel in releases:
         if not isinstance(rel, dict):
             continue
-        state = (rel.get("state") or "").lower()
-        secret = rel.get("secret")
-        if secret is True:
+        # API 3.1: state_name is "on_sale" | "off_sale"; older code used wrong key "state"
+        if rel.get("secret") is True:
             continue
-        if state != "on_sale":
+        if rel.get("off_sale") is True:
+            continue
+        sn = (rel.get("state_name") or rel.get("state") or "").lower()
+        if sn == "off_sale":
+            continue
+        if sn and sn != "on_sale":
             continue
         out.append(rel)
     return out
