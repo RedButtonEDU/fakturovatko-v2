@@ -6,7 +6,7 @@ Před spuštěním:
   - V Google Cloud Console zapněte Gmail API.
   - Vytvořte OAuth klient typu „Desktop app“ a stáhněte JSON (doporučeno), NEBO
     použijte Web application + v Authorized redirect URIs přidejte přesně:
-    http://127.0.0.1:8080/  (pokud použijete --port 8080 níže).
+    http://localhost:8080/  (výchozí host a port skriptu; viz google_auth_oauthlib).
 
 Použití (z kořene repa, venv s backend/requirements.txt):
   python3 scripts/obtain_gmail_refresh_token.py --secrets-file ~/Downloads/client_secret_....json
@@ -93,7 +93,13 @@ def main() -> None:
     args = parser.parse_args()
 
     flow = _flow_from_args(args)
+    # Musí přesně odpovídat Authorized redirect URIs u Web client (google_auth_oauthlib default host=localhost).
+    print(
+        f"Redirect URI pro Google Cloud Console (Web application): http://localhost:{args.port}/\n",
+        file=sys.stderr,
+    )
     creds = flow.run_local_server(
+        host="localhost",
         port=args.port,
         open_browser=not args.no_browser,
         success_message="Hotovo. Můžete zavřít toto okno a vrátit se do terminálu.",
