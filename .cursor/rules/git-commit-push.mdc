@@ -1,0 +1,11 @@
+---
+description: Po dokončení práce automaticky commit a push na origin (bez čekání na výzvu)
+alwaysApply: true
+---
+
+# Commit a push bez vyzvání
+
+- Po dokončení úkolu uživatele (kód, konfigurace, dokumentace v rámci zadání) a pokud vznikly **smysluplné změny**, **sám proveď** `git add`, `git commit` s výstižnou zprávou (preferuj anglický subject jako v repu, pokud už tam tak jsou commity) a **`git push`** na aktuální větev (`origin`).
+- **Nečekej** na samostatné „commit a push“, pokud uživatel výslovně neřekl, že commitovat nechce (WIP, experiment) nebo že máš jen připravit diff.
+- Pokud **není co commitovat**, push není potřeba (nebo selže kvůli právům / konfliktu), stručně to napiš.
+- Jedna logická změna = jeden commit, případně rozumně rozdělené commity; žádné prázdné commity.
