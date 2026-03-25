@@ -45,7 +45,8 @@ export default function App() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [releaseId, setReleaseId] = useState<number | ''>('')
-  const [qty, setQty] = useState(1)
+  /** String so user can clear the field and type a new number; blur normalizes to 1–50 */
+  const [qtyInput, setQtyInput] = useState('1')
   const [invoiceCompany, setInvoiceCompany] = useState(false)
   const [address, setAddress] = useState('')
   const [country, setCountry] = useState('CZ')
@@ -80,16 +81,22 @@ export default function App() {
     [releases, releaseId],
   )
 
+  const quantityForTotals = useMemo(() => {
+    const n = parseInt(qtyInput, 10)
+    if (qtyInput === '' || Number.isNaN(n)) return 0
+    return Math.min(50, Math.max(1, n))
+  }, [qtyInput])
+
   const linePrices = useMemo(() => {
     if (!eventMeta || !selectedRelease) return null
     const u = unitPrices(selectedRelease.price, eventMeta.show_prices_ex_tax)
     return {
       unitEx: u.ex,
       unitInc: u.inc,
-      totalEx: u.ex * qty,
-      totalInc: u.inc * qty,
+      totalEx: u.ex * quantityForTotals,
+      totalInc: u.inc * quantityForTotals,
     }
-  }, [eventMeta, selectedRelease, qty])
+  }, [eventMeta, selectedRelease, quantityForTotals])
 
   async function onLookupIco() {
     if (!ico.trim()) return
@@ -129,12 +136,16 @@ export default function App() {
         return
       }
     }
+    const n = parseInt(qtyInput, 10)
+    const ticketQty =
+      qtyInput === '' || Number.isNaN(n) || n < 1 ? 1 : Math.min(50, n)
+
     setLoading(true)
     try {
       await createOrder({
         full_name: fullName,
         email,
-        ticket_quantity: qty,
+        ticket_quantity: ticketQty,
         tito_release_id: selectedRelease.id,
         tito_release_slug: selectedRelease.slug,
         tito_release_title: selectedRelease.title,
@@ -219,11 +230,26 @@ export default function App() {
             <label>
               {t(lang, 'quantity')}
               <input
-                type="number"
-                min={1}
-                max={50}
-                value={qty}
-                onChange={(e) => setQty(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={2}
+                value={qtyInput}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v === '' || /^\d+$/.test(v)) {
+                    setQtyInput(v)
+                  }
+                }}
+                onBlur={() => {
+                  const n = parseInt(qtyInput, 10)
+                  if (qtyInput === '' || Number.isNaN(n) || n < 1) {
+                    setQtyInput('1')
+                  } else {
+                    setQtyInput(String(Math.min(50, n)))
+                  }
+                }}
               />
             </label>
 
