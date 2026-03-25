@@ -214,9 +214,18 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 
 5. Zkopírujte **Client ID** a **Client Secret** → `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
-6. **Refresh token** (scope `gmail.send`, stejný jako v backendu): v repu je skript `scripts/obtain_gmail_refresh_token.py`. Doporučeně ho spusťte **lokálně** (klon repa), v aktivovaném venv s `backend/requirements.txt`: např. `jspython3 scripts/obtain_gmail_refresh_token.py --secrets-file ~/Downloads/client_secret_….on` (OAuth klient typu **Desktop app** — stažený JSON z Google Cloud). Pro klient typu **Web application** v **Authorized redirect URIs** přidejte přesně **`http://localhost:8080/`** (knihovna `google_auth_oauthlib` ve výchozím stavu používá host `localhost`, ne `127.0.0.1` — jinak dostanete chybu `redirect_uri_mismatch`). Můžete přidat i druhou řádku `http://127.0.0.1:8080/`, pokud byste někdy měnili host. Výchozí port skriptu je `8080`. Po novém buildu image je stejný soubor v kontejneru jako `python3 /app/scripts/obtain_gmail_refresh_token.py` (OAuth z kontejneru často potřebuje mapování portu na hosta — jednodušší je lokální běh). Přihlaste se účtem **hello@redbuttonedu.cz**; výstup `GMAIL_REFRESH_TOKEN=…` vložte do Coolify.
+6. **Refresh token** (scope `gmail.send`, stejný jako v backendu): v repu je skript `scripts/obtain_gmail_refresh_token.py`. Doporučeně ho spusťte **lokálně** (klon repa), v aktivovaném venv s `backend/requirements.txt`: např. `jspython3 scripts/obtain_gmail_refresh_token.py --secrets-file ~/Downloads/client_secret_….on` (OAuth klient typu **Desktop app** — stažený JSON z Google Cloud). Pro klient typu **Web application** v **Authorized redirect URIs** přidejte přesně **`
+** (knihovna `google_auth_oauthlib` ve výchozím stavu používá host `localhost`, ne `127.0.0.1` — jinak dostanete chybu `redirect_uri_mismatch`). Můžete přidat i druhou řádku `http://127.0.0.1:8080/`, pokud byste někdy měnili host. Výchozí port skriptu je `8080`. Po novém buildu image je stejný soubor v kontejneru jako `python3 /app/scripts/obtain_gmail_refresh_token.py` (OAuth z kontejneru často potřebuje mapování portu na hosta — jednodušší je lokální běh). Přihlaste se účtem **hello@redbuttonedu.cz**; výstup `GMAIL_REFRESH_TOKEN=…` vložte do Coolify.
 
 7. V **Google Workspace Admin** (pokud používáte) ověřte, že účet smí používat danou OAuth aplikaci.
+
+### Slovenské IČO, DIČ a IČ DPH (formulář „faktura na firmu“)
+
+- **IČO** (8 číslic) — identifikátor subjektu v obchodnom registri; načítáme z RPO přes veřejné API ŠÚ SR (`api.statistics.sk`).
+- **DIČ** — 10 číslic, daňové identifikační číslo; **není** matematicky odvozené od IČO (proto ho aplikace z IČO „nevypočítá“).
+- **IČ DPH** (pro faktury v EU / osvobození) — formát **SK** + **stejných 10 číslic jako u DIČ** (příklad tvaru: `SK1234567890`).
+
+**Jak doplnit DIČ / IČ DPH:** ručně z fakturačních údajů firmy, z [overenia IČ DPH](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overovanie-ic-dph) / [VIES](https://ec.europa.eu/taxation_customs/vies/) (když už číslo znáte), nebo v budoucnu napojení na **OpenData API Finančnej správy** ([iz.opendata.financnasprava.sk](https://iz.opendata.financnasprava.sk/) — bezplatná registrace a klíč; zveřejňované seznamy platitelů DPH včetně vazby na IČO). Komerční služby (např. FirmAPI, Finstat) umí vyhledání podle IČO včetně DIČ.
 
 ---
 

@@ -111,6 +111,14 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
+.field-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--gray-300);
+}
+
 .form label {
   display: block;
   margin-bottom: 1rem;

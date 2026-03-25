@@ -2,6 +2,9 @@
 
 Český ARES (ares.gov.cz) slovenské subjekty touto cestou nevracia — používame oficiálne REST API.
 Dokumentácia: https://api.statistics.sk/rpo (search?identifier=…)
+
+DIČ / IČ DPH: odpoveď RPO **neobsahuje** daňové čísla. DIČ (10 číslic) a IČ DPH (SK + tých istých 10 číslic)
+**nie sú** matematicky odvodené od IČO — dopĺňajú sa ručne alebo z iného zdroja (OpenData FS, komerčné API).
 """
 
 from typing import Any, Optional

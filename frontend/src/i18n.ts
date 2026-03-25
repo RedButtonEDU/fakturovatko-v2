@@ -45,6 +45,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     ico: 'IČO',
     companyName: 'Název firmy',
     vatId: 'DIČ',
+    vatIdHintSk:
+      'DIČ a IČ DPH (SK + 10 číslic) nejdou spočítat z IČO — doplňte ručně nebo z účtování. Načtení z RPO plní jen firmu a adresu.',
     lookup: 'Načíst z ARES',
     lookupRpo: 'Načíst z RPO',
     submit: 'Odeslat objednávku',
@@ -73,6 +75,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     ico: 'Company ID',
     companyName: 'Company name',
     vatId: 'VAT ID',
+    vatIdHintSk:
+      'DIČ and VAT (SK + 10 digits) are not derived from IČO — enter manually. RPO load fills company name and address only.',
     lookup: 'Load from ARES',
     lookupRpo: 'Load from RPO',
     submit: 'Submit order',
