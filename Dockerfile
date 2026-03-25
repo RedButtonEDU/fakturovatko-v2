@@ -21,6 +21,7 @@ COPY backend/requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY backend/app ./app
+COPY scripts ./scripts
 COPY --from=frontend /build/dist ./app/static
 
 ENV PYTHONPATH=/app
