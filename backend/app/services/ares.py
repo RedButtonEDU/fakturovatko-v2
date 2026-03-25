@@ -1,11 +1,15 @@
 """ARES — ekonomické subjekty (MFČR REST API v3).
 
 Dokumentace: https://ares.gov.cz/swagger-ui.html (ekonomicke-subjekty-v-be)
+
+Slovenské IČO: český ARES je neobsahuje — používá se ``rpo_sk.lookup_sk_ico`` (API ŠÚ SR).
 """
 
 from typing import Any, Optional
 
 import httpx
+
+from app.services import rpo_sk
 
 BASE = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest"
 
@@ -81,13 +85,16 @@ async def _get_json(client: httpx.AsyncClient, url: str) -> Optional[dict[str, A
 
 async def lookup_ico(ico: str, country: str) -> Optional[dict[str, Any]]:
     """
-    Vyhledání podle IČO. CZ: GET /ekonomicke-subjekty/{ico}.
-    SK: pokus GET /ekonomicke-subjekty-vr/{ico}, jinak POST /ekonomicke-subjekty/vyhledat.
+    Vyhledání podle IČO. CZ: ARES GET /ekonomicke-subjekty/{ico}.
+    SK: RPO ŠÚ SR ``/rpo/v1/search?identifier=`` (viz ``rpo_sk``) — český ARES SK firmy nevrací.
     """
     country = country.upper()
     digits = _digits_only(ico)
     if not digits:
         return None
+
+    if country == "SK":
+        return await rpo_sk.lookup_sk_ico(ico)
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         if country == "CZ":
@@ -97,26 +104,5 @@ async def lookup_ico(ico: str, country: str) -> Optional[dict[str, Any]]:
             url = f"{BASE}/ekonomicke-subjekty/{code}"
             subj = await _get_json(client, url)
             return _parse_subject(subj) if subj else None
-
-        if country == "SK":
-            code = _cz_ico_8(digits)
-            if not code:
-                return None
-            subj = await _get_json(client, f"{BASE}/ekonomicke-subjekty-vr/{code}")
-            if subj:
-                return _parse_subject(subj)
-            r = await client.post(
-                f"{BASE}/ekonomicke-subjekty/vyhledat",
-                json={"ico": [code]},
-                headers={"Accept": "application/json", "Content-Type": "application/json"},
-            )
-            if r.status_code >= 400:
-                return None
-            data = r.json()
-            items = data.get("ekonomickeSubjekty") or []
-            if not items:
-                return None
-            first = items[0]
-            return _parse_subject(first) if isinstance(first, dict) else None
 
     return None

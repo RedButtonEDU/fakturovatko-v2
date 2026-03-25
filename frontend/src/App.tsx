@@ -107,7 +107,7 @@ export default function App() {
     try {
       const data = await lookupAres(ico, country)
       if (!data) {
-        setErr(t(lang, 'icoNotFound'))
+        setErr(t(lang, country === 'SK' ? 'icoNotFoundSk' : 'icoNotFound'))
         return
       }
       if (data.company_name) setCompanyName(data.company_name)
@@ -115,7 +115,7 @@ export default function App() {
       if (parts.length) setAddress(parts.join(', '))
       if (data.vat_id) setVatId(data.vat_id)
     } catch {
-      setErr(t(lang, 'icoNotFound'))
+      setErr(t(lang, country === 'SK' ? 'icoNotFoundSk' : 'icoNotFound'))
     } finally {
       setIcoLoading(false)
     }
