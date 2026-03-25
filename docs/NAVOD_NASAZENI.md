@@ -154,6 +154,28 @@ Bez volume se data po redeployi smažou.
 
 3. V `ALLOWED_ORIGINS` musí být přesně `https://invoice.exponentialsummit.cz` (bez koncového lomítka, pokud to vaše verze Coolify tak očekává).
 
+### 7.1 Traefik / Caddy labely (jako u RB Universe)
+
+V **Red Button Universe** se pro dev/produkci nepoužívá jeden „skript“ v repu aplikace — labely generuje **Coolify**, a tým doplňuje je podle potřeby. Referenční generátor je v projektu **RB Universe**: `scripts/coolify_dev_labels.sh` — vypisuje **současně** labely pro **Traefik** i **Caddy** (`traefik.http.routers…`, `caddy_0…`). To je v pořádku: stack na serveru používá jednu z cest, Coolify často obě nechává ve štítcích kontejneru.
+
+**Pro Fakturovatko (jedna služba, port 8000, FastAPI + statika):**
+
+| Kontrola | Co očekávat |
+|----------|-------------|
+| Port backendu | `traefik.http.services…loadbalancer.server.port=8000` a Caddy `reverse_proxy` na **8000** |
+| SPA (React) | `try_files` na `/index.html` je žádoucí pro client-side routing |
+| HTTPS | Po přidání domény přes UI by měly přibýt i **https** routery s `tls` a `letsencrypt` (záleží na verzi Coolify). Pokud máte jen `http-0-…`, zkontrolujte, že v **Domains** je doména s **https://** a proběhl deploy. |
+
+**Kdy labely upravovat ručně** (stejná logika jako v `docs/dual_domain_checklist.md` u RB Universe):
+
+- **Dvě domény** (např. sslip.io **a** `invoice.exponentialsummit.cz`) na stejný kontejner: u Traefik rozšířte pravidlo `Host(\`…\`)` na  
+  `Host(\`stara\`) || Host(\`nova\`)` pro **http i https** router.
+- **Caddy**: po přidání druhé domény v UI často Coolify doplní druhý blok; pokud ne, řešte podle dokumentace vaší verze (někdy stačí druhá doména jen v poli Domains bez editace labelů).
+
+**Kdy neměnit nic:** stránka i `/health` na přidělené URL fungují, TLS je OK — **Není nutné** mazat Traefik kvůli Caddy nebo naopak; u RB Universe jsou obě sady záměrně.
+
+**Readonly labels:** pokud Coolify má štítky jen ke čtení, změny dělejte přidáním domény v UI, nebo dočasně vypněte readonly (podle verze).
+
 ---
 
 ## 8. Coolify — Scheduled Task (cron)
