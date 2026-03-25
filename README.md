@@ -50,7 +50,8 @@ docker run --rm -p 8000:8000 -e TITO_API_KEY=... fakturovatko
 
 ## Dokumentace nasazení
 
-- [docs/COOLIFY.md](docs/COOLIFY.md)
+- **[Kompletní návod (Coolify, Google, GitHub, DNS, …)](docs/NAVOD_NASAZENI.md)**
+- [docs/COOLIFY.md](docs/COOLIFY.md) — stručné poznámky k Coolify a cronu
 
 ## Poznámky
 
