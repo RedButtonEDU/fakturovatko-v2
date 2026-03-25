@@ -311,7 +311,7 @@ export default function App() {
                     <input value={ico} onChange={(e) => setIco(e.target.value)} />
                   </label>
                   <button type="button" className="secondary" onClick={onLookupIco} disabled={icoLoading}>
-                    {icoLoading ? '…' : t(lang, 'lookup')}
+                    {icoLoading ? '…' : t(lang, country === 'SK' ? 'lookupRpo' : 'lookup')}
                   </button>
                 </div>
                 <label>
