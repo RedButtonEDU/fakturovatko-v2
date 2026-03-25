@@ -1,4 +1,35 @@
+import type { Country } from './api'
+
 export type Lang = 'cs' | 'en'
+
+/** ISO 3166-1 alpha-2 → localized country name (Česko, Slovakia, …) */
+export function countryDisplayName(code: string, lang: Lang, fallback: string): string {
+  try {
+    const locale = lang === 'cs' ? 'cs-CZ' : 'en-GB'
+    const dn = new Intl.DisplayNames([locale], { type: 'region' })
+    return dn.of(code) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+/** CZ a SK první, zbytek abecedně podle lokalizovaného názvu */
+export function orderCountriesForDisplay(countries: Country[], lang: Lang): Country[] {
+  const priority: string[] = ['CZ', 'SK']
+  const locale = lang === 'cs' ? 'cs-CZ' : 'en-GB'
+  const collatorLocale = lang === 'cs' ? 'cs' : 'en'
+  const dn = new Intl.DisplayNames([locale], { type: 'region' })
+  const label = (c: Country) => dn.of(c.code) ?? c.name_en
+
+  const head = priority
+    .map((code) => countries.find((c) => c.code === code))
+    .filter((c): c is Country => c != null)
+
+  const rest = countries.filter((c) => !priority.includes(c.code))
+  rest.sort((a, b) => label(a).localeCompare(label(b), collatorLocale))
+
+  return [...head, ...rest]
+}
 
 const STRINGS: Record<Lang, Record<string, string>> = {
   cs: {

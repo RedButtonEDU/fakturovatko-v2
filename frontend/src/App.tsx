@@ -9,7 +9,7 @@ import {
   type Country,
   type Release,
 } from './api'
-import { detectLang, t, type Lang } from './i18n'
+import { countryDisplayName, detectLang, orderCountriesForDisplay, t, type Lang } from './i18n'
 
 const VAT = 0.21
 
@@ -97,6 +97,8 @@ export default function App() {
       totalInc: u.inc * quantityForTotals,
     }
   }, [eventMeta, selectedRelease, quantityForTotals])
+
+  const countriesForUi = useMemo(() => orderCountriesForDisplay(countries, lang), [countries, lang])
 
   async function onLookupIco() {
     if (!ico.trim()) return
@@ -296,9 +298,9 @@ export default function App() {
                 <label>
                   {t(lang, 'country')}
                   <select value={country} onChange={(e) => setCountry(e.target.value)} required>
-                    {countries.map((c) => (
+                    {countriesForUi.map((c) => (
                       <option key={c.code} value={c.code}>
-                        {c.name_en}
+                        {countryDisplayName(c.code, lang, c.name_en)}
                       </option>
                     ))}
                   </select>
