@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # Allfred GraphQL
     allfred_api_key: Optional[str] = None
     allfred_workspace: str = "redbuttonedu"
+    # Dev: treat mock proformas as paid in cron job
+    allfred_mock_paid: bool = False
 
     # Gmail (same pattern as RB Universe)
     google_client_id: Optional[str] = None

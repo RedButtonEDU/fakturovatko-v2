@@ -1,5 +1,7 @@
 # Fakturovatko v2
 
+**Repository:** [github.com/RedButtonEDU/fakturovatko-v2](https://github.com/RedButtonEDU/fakturovatko-v2)
+
 Webová aplikace pro objednávku vstupenek **Exponential Summit 2026** s proforma fakturou (Allfred), e-mailem z `hello@redbuttonedu.cz`, kontrolou platby, slevovým kódem Ti.to a zápisem do Pipedrive.
 
 ## Stack

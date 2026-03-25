@@ -60,11 +60,8 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
     for order in orders:
         try:
             pf_id = order.allfred_proforma_id
-            if not pf_id or pf_id.startswith("mock-"):
-                # Demo: treat mock as unpaid unless ALLFRED_MOCK_PAID=true
-                import os
-
-                if os.getenv("ALLFRED_MOCK_PAID", "").lower() not in ("1", "true", "yes"):
+            if not pf_id or str(pf_id).startswith("mock-"):
+                if not s.allfred_mock_paid:
                     continue
                 paid = True
                 project_ids = {order.allfred_project_id or "mock"}
