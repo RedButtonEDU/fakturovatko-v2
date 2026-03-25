@@ -1,80 +1,122 @@
-"""ARES economic subjects search (CZ + SK)."""
+"""ARES — ekonomické subjekty (MFČR REST API v3).
+
+Dokumentace: https://ares.gov.cz/swagger-ui.html (ekonomicke-subjekty-v-be)
+"""
 
 from typing import Any, Optional
 
 import httpx
 
-ARES_BASE = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vychozi-dotaz"
+BASE = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest"
 
 
-async def lookup_ico(ico: str, country: str) -> Optional[dict[str, Any]]:
-    """
-    Look up company by registration number.
-    Returns dict with company_name, street, city, zip, vat_id (dic) or None if not found.
-    """
-    ico = "".join(ch for ch in ico.strip() if ch.isdigit())
-    if not ico:
+def _digits_only(s: str) -> str:
+    return "".join(ch for ch in s.strip() if ch.isdigit())
+
+
+def _cz_ico_8(digits: str) -> Optional[str]:
+    """IČO pro CZ musí být přesně 8 číslic (API pattern ^\\d{8}$)."""
+    if not digits:
         return None
-    country = country.upper()
-    # ARES API accepts ico in body; for SK use 8 digits typically
-    payload: dict[str, Any] = {"ico": [ico]}
-    if country == "SK":
-        payload["seznamCiselnikuFiltru"] = ["stavZdrojeVr"]  # optional; API may still work
+    if len(digits) > 8:
+        digits = digits[-8:]
+    if len(digits) < 8:
+        digits = digits.zfill(8)
+    return digits if len(digits) == 8 else None
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        r = await client.post(
-            ARES_BASE,
-            json=payload,
-            headers={"Accept": "application/json"},
-        )
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError:
-            return None
-        data = r.json()
 
-    # Response shape varies — try common keys
-    items = (
-        data.get("ekonomickySubjekty")
-        or data.get("ekonomickySubjekt")
-        or data.get("ekonomickéSubjekty")
-        or []
-    )
-    if isinstance(items, dict):
-        items = [items]
-    if not items:
-        return None
-    subj = items[0] if isinstance(items[0], dict) else None
-    if not subj:
-        return None
+def _format_street(ad: dict[str, Any]) -> str:
+    ulice = ad.get("nazevUlice")
+    cd = ad.get("cisloDomovni")
+    co = ad.get("cisloOrientacni")
+    if ulice:
+        ulice_s = str(ulice).strip()
+        if cd is not None:
+            if co is not None:
+                return f"{ulice_s} {cd}/{co}".strip()
+            return f"{ulice_s} {cd}".strip()
+        return ulice_s
+    tv = ad.get("textovaAdresa")
+    if tv:
+        return str(tv).split(",")[0].strip()
+    return ""
 
-    # Parse nested ARES structure (simplified)
-    def _first_addr(s: dict) -> dict:
-        sid = s.get("sidlo") or {}
-        if isinstance(sid, dict):
-            return sid
-        return {}
 
-    ad = _first_addr(subj)
-    nazev = subj.get("obchodniJmeno") or subj.get("nazev") or ""
+def _psc_str(ad: dict[str, Any]) -> str:
+    psc = ad.get("psc")
+    if psc is None:
+        return ""
+    return str(int(psc)) if isinstance(psc, (int, float)) else str(psc).replace(" ", "")
+
+
+def _parse_subject(subj: dict[str, Any]) -> dict[str, Any]:
+    ad = subj.get("sidlo")
+    if not isinstance(ad, dict):
+        ad = {}
+    nazev = subj.get("obchodniJmeno") or ""
     dic = subj.get("dic")
-    if not dic:
-        dic = subj.get("dic")
-    # CZ format: ico 8 digits
+    street = _format_street(ad)
+    city = str(ad.get("nazevObce") or "").strip()
     return {
         "company_name": str(nazev).strip() if nazev else "",
-        "street": _format_street(ad),
-        "city": ad.get("nazevObce") or ad.get("nazevObce") or "",
-        "zip": str(ad.get("psc") or "").replace(" ", ""),
+        "street": street,
+        "city": city,
+        "zip": _psc_str(ad),
         "vat_id": str(dic).strip() if dic else None,
         "raw": subj,
     }
 
 
-def _format_street(ad: dict) -> str:
-    parts = []
-    for key in ("nazevUlice", "cisloDomovni", "cisloOrientacni"):
-        v = ad.get(key)
-        if v:
-            parts.append(str(v))
-    return " ".join(parts).strip()
+async def _get_json(client: httpx.AsyncClient, url: str) -> Optional[dict[str, Any]]:
+    r = await client.get(url, headers={"Accept": "application/json"})
+    if r.status_code == 404:
+        return None
+    if r.status_code >= 400:
+        return None
+    data = r.json()
+    if isinstance(data, dict) and data.get("kod"):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+async def lookup_ico(ico: str, country: str) -> Optional[dict[str, Any]]:
+    """
+    Vyhledání podle IČO. CZ: GET /ekonomicke-subjekty/{ico}.
+    SK: pokus GET /ekonomicke-subjekty-vr/{ico}, jinak POST /ekonomicke-subjekty/vyhledat.
+    """
+    country = country.upper()
+    digits = _digits_only(ico)
+    if not digits:
+        return None
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        if country == "CZ":
+            code = _cz_ico_8(digits)
+            if not code:
+                return None
+            url = f"{BASE}/ekonomicke-subjekty/{code}"
+            subj = await _get_json(client, url)
+            return _parse_subject(subj) if subj else None
+
+        if country == "SK":
+            code = _cz_ico_8(digits)
+            if not code:
+                return None
+            subj = await _get_json(client, f"{BASE}/ekonomicke-subjekty-vr/{code}")
+            if subj:
+                return _parse_subject(subj)
+            r = await client.post(
+                f"{BASE}/ekonomicke-subjekty/vyhledat",
+                json={"ico": [code]},
+                headers={"Accept": "application/json", "Content-Type": "application/json"},
+            )
+            if r.status_code >= 400:
+                return None
+            data = r.json()
+            items = data.get("ekonomickeSubjekty") or []
+            if not items:
+                return None
+            first = items[0]
+            return _parse_subject(first) if isinstance(first, dict) else None
+
+    return None

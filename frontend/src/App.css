@@ -1,14 +1,32 @@
+/* Zarovnáno s exponentialsummit.cz — Montserrat, Red Button červená, tmavé pozadí */
+
 .page {
+  --rb-red: #e3173e;
+  --rb-red-dark: #b8102f;
+  --rb-red-glow: rgba(227, 23, 62, 0.4);
+  --dark-900: #0a0a0a;
+  --dark-800: #111111;
+  --dark-700: #1a1a1a;
+  --dark-600: #222222;
+  --gray-300: #888888;
+  --gray-200: #aaaaaa;
+  --white: #ffffff;
+
   min-height: 100vh;
-  background: linear-gradient(165deg, #071018 0%, #0d1f2d 45%, #0a1624 100%);
-  color: #e8eef4;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(227, 23, 62, 0.18), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(227, 23, 62, 0.08), transparent 50%),
+    var(--dark-900);
+  color: var(--white);
+  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 .hero {
   padding: 3rem 1.5rem 2rem;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.25);
-  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(201, 162, 39, 0.12), transparent);
+  border-bottom: 1px solid var(--dark-600);
+  background: linear-gradient(to bottom, rgba(17, 17, 17, 0.5), transparent);
 }
 
 .hero-inner {
@@ -17,24 +35,28 @@
 }
 
 .eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  font-size: 0.75rem;
-  color: #c9a227;
-  margin: 0 0 0.5rem;
+  color: var(--rb-red);
+  margin: 0 0 0.75rem;
 }
 
 .hero h1 {
-  font-size: clamp(1.75rem, 4vw, 2.25rem);
-  font-weight: 700;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.15;
   margin: 0 0 0.5rem;
-  color: #fff;
+  color: var(--white);
 }
 
 .lead {
   margin: 0 0 1.25rem;
-  opacity: 0.85;
-  line-height: 1.5;
+  color: var(--gray-200);
+  line-height: 1.65;
+  font-size: 1rem;
 }
 
 .lang-switch {
@@ -42,22 +64,37 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .lang-switch button {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(201, 162, 39, 0.35);
-  color: #e8eef4;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
+  background: transparent;
+  border: 2px solid var(--dark-600);
+  color: var(--gray-200);
+  padding: 0.4rem 0.85rem;
+  border-radius: 0;
   cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.lang-switch button:hover {
+  border-color: var(--gray-300);
+  color: var(--white);
 }
 
 .lang-switch button.active {
-  background: rgba(201, 162, 39, 0.2);
-  border-color: #c9a227;
-  color: #fff;
+  background: var(--rb-red);
+  border-color: var(--rb-red);
+  color: var(--white);
 }
 
 .shell {
@@ -67,18 +104,19 @@
 }
 
 .card {
-  background: rgba(10, 22, 36, 0.85);
-  border: 1px solid rgba(201, 162, 39, 0.2);
-  border-radius: 12px;
+  background: var(--dark-800);
+  border: 1px solid var(--dark-600);
+  border-radius: 4px;
   padding: 1.75rem;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
 .form label {
   display: block;
   margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: #b8c5d0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-200);
 }
 
 .form input,
@@ -88,59 +126,94 @@
   width: 100%;
   margin-top: 0.35rem;
   padding: 0.65rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.35);
-  color: #fff;
+  border-radius: 0;
+  border: 1px solid var(--dark-600);
+  background: var(--dark-900);
+  color: var(--white);
   font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
 }
 
 .form input:focus,
 .form select:focus,
 .form textarea:focus {
   outline: none;
-  border-color: #c9a227;
-  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.35);
+  border-color: var(--rb-red);
+  box-shadow: 0 0 0 1px var(--rb-red-glow);
 }
 
 .checkbox {
   display: flex !important;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 600;
 }
 
 .checkbox input {
   width: auto !important;
   margin: 0;
+  accent-color: var(--rb-red);
 }
 
 .primary {
   width: 100%;
   margin-top: 0.5rem;
-  padding: 0.85rem 1rem;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
-  background: linear-gradient(180deg, #d4b03a 0%, #c9a227 100%);
-  color: #0a1624;
+  font-family: inherit;
+  background: var(--rb-red);
+  color: var(--white);
+  transition:
+    background 0.25s ease,
+    transform 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--rb-red-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 32px var(--rb-red-glow);
 }
 
 .primary:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .secondary {
   align-self: flex-end;
   padding: 0.55rem 1rem;
-  border-radius: 8px;
-  border: 1px solid rgba(201, 162, 39, 0.45);
+  border-radius: 0;
+  border: 2px solid var(--rb-red);
   background: transparent;
-  color: #c9a227;
+  color: var(--rb-red);
   cursor: pointer;
   height: fit-content;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--rb-red);
+  color: var(--white);
+}
+
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .ico-row {
@@ -152,30 +225,35 @@
 
 .price-box {
   padding: 1rem;
-  border-radius: 8px;
-  background: rgba(201, 162, 39, 0.08);
-  border: 1px solid rgba(201, 162, 39, 0.2);
+  border-radius: 4px;
+  background: var(--dark-700);
+  border: 1px solid var(--dark-600);
+  border-left: 3px solid var(--rb-red);
   margin-bottom: 1rem;
-  line-height: 1.6;
+  line-height: 1.65;
+  color: var(--gray-200);
+  font-size: 0.95rem;
 }
 
 .alert {
-  background: rgba(220, 80, 80, 0.15);
-  border: 1px solid rgba(220, 80, 80, 0.45);
-  color: #ffb4b4;
+  background: rgba(227, 23, 62, 0.12);
+  border: 1px solid rgba(227, 23, 62, 0.45);
+  color: #ffb3c0;
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  border-radius: 4px;
   margin-bottom: 1rem;
+  font-size: 0.9rem;
 }
 
 .success h2 {
   margin-top: 0;
   color: #7fd8a8;
+  font-weight: 800;
 }
 
 .footer {
   text-align: center;
   padding: 2rem;
   font-size: 0.85rem;
-  opacity: 0.55;
+  color: var(--gray-300);
 }
