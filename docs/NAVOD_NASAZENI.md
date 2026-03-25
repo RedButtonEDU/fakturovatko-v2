@@ -2,6 +2,8 @@
 
 Tento dokument shrnuje kroky od nuly po běžící aplikaci na **invoice.exponentialsummit.cz** v **Coolify**, včetně **Google Cloud**, **GitHub**, **DNS** a dalších služeb.
 
+**Produkce = jedna doména:** stačí **`https://invoice.exponentialsummit.cz`**. Adresy typu **sslip.io** nejsou potřeba — nepřidávejte je do Coolify Domains ani do `ALLOWED_ORIGINS`, pokud je nechcete používat.
+
 Repozitář: [github.com/RedButtonEDU/fakturovatko-v2](https://github.com/RedButtonEDU/fakturovatko-v2)
 
 ---
@@ -115,7 +117,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | Proměnná | Povinné | Popis |
 |----------|---------|--------|
 | `DATABASE_URL` | ano | Pro produkci s volume: `sqlite:////data/fakturovatko.sqlite3` |
-| `ALLOWED_ORIGINS` | ano | `https://invoice.exponentialsummit.cz` (případně další URL při testu) |
+| `ALLOWED_ORIGINS` | ano | Jen `https://invoice.exponentialsummit.cz` (jedna hodnota; bez sslip.io, pokud ho nepoužíváte) |
 | `CRON_SECRET` | ano | Náhodný dlouhý řetězec; **stejná** hodnota jako u scheduled tasku (viz [§8](#8-coolify--scheduled-task-cron)) |
 | `TITO_API_KEY` | ano | Token z [id.tito.io](https://id.tito.io) (režim **live**) |
 | `TITO_ACCOUNT_SLUG` | ano | `redbutton` |
@@ -146,35 +148,39 @@ Bez volume se data po redeployi smažou.
 
 ---
 
-## 7. Coolify — doména a TLS
+## 7. Coolify — doména a TLS (jen invoice.exponentialsummit.cz)
 
-1. V nastavení služby přidejte doménu: **invoice.exponentialsummit.cz**
+Cíl: veřejně používat **pouze** `https://invoice.exponentialsummit.cz` — bez paralelní sslip.io adresy.
 
-2. Zapněte **HTTPS** (Let’s Encrypt přes Coolify).
+1. **DNS** (viz [§13](#13-dns)) nejdřív nasměrujte `invoice.exponentialsummit.cz` na server / proxy podle instrukcí Coolify.
 
-3. V `ALLOWED_ORIGINS` musí být přesně `https://invoice.exponentialsummit.cz` (bez koncového lomítka, pokud to vaše verze Coolify tak očekává).
+2. V nastavení služby v **Domains** přidejte **jen**  
+   `https://invoice.exponentialsummit.cz`  
+   (nebo jak Coolify vyžaduje zadání domény — důležité je **HTTPS** a Let’s Encrypt).
 
-### 7.1 Traefik / Caddy labely (jako u RB Universe)
+3. Pokud Coolify dříve přiřadil automatickou adresu **\*.sslip.io**, můžete ji v **Domains** **odstranit**, až bude produkční doména ověřená a funguje — není nutné mít obě najednou.
 
-V **Red Button Universe** se pro dev/produkci nepoužívá jeden „skript“ v repu aplikace — labely generuje **Coolify**, a tým doplňuje je podle potřeby. Referenční generátor je v projektu **RB Universe**: `scripts/coolify_dev_labels.sh` — vypisuje **současně** labely pro **Traefik** i **Caddy** (`traefik.http.routers…`, `caddy_0…`). To je v pořádku: stack na serveru používá jednu z cest, Coolify často obě nechává ve štítcích kontejneru.
+4. V `ALLOWED_ORIGINS` nechte **pouze**  
+   `https://invoice.exponentialsummit.cz`  
+   (bez koncového lomítka; žádný další origin, pokud ho záměrně nepotřebujete).
 
-**Pro Fakturovatko (jedna služba, port 8000, FastAPI + statika):**
+5. Po změně domény / env spusťte **Redeploy**.
+
+### 7.1 Traefik / Caddy labely
+
+Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stejný vzor jako v RB Universe — viz jejich `scripts/coolify_dev_labels.sh`). Na serveru aktivní bývá jedna z cest.
+
+**Pro jednu produkční doménu** obvykle **nic ručně nepřepisujte**: po zadání `invoice.exponentialsummit.cz` v UI by měl být `Host(...)` jen pro tuto doménu.
 
 | Kontrola | Co očekávat |
 |----------|-------------|
-| Port backendu | `traefik.http.services…loadbalancer.server.port=8000` a Caddy `reverse_proxy` na **8000** |
-| SPA (React) | `try_files` na `/index.html` je žádoucí pro client-side routing |
-| HTTPS | Po přidání domény přes UI by měly přibýt i **https** routery s `tls` a `letsencrypt` (záleží na verzi Coolify). Pokud máte jen `http-0-…`, zkontrolujte, že v **Domains** je doména s **https://** a proběhl deploy. |
+| Port | směrování na kontejnerový port **8000** |
+| SPA | `try_files` k `/index.html` je v pořádku pro React |
+| HTTPS | routery s TLS / Let’s Encrypt po úspěšném DNS a deployi |
 
-**Kdy labely upravovat ručně** (stejná logika jako v `docs/dual_domain_checklist.md` u RB Universe):
+**Readonly labels:** upravujte přes **Domains** v UI; ruční editace jen při konkrétním problému (502, špatný port).
 
-- **Dvě domény** (např. sslip.io **a** `invoice.exponentialsummit.cz`) na stejný kontejner: u Traefik rozšířte pravidlo `Host(\`…\`)` na  
-  `Host(\`stara\`) || Host(\`nova\`)` pro **http i https** router.
-- **Caddy**: po přidání druhé domény v UI často Coolify doplní druhý blok; pokud ne, řešte podle dokumentace vaší verze (někdy stačí druhá doména jen v poli Domains bez editace labelů).
-
-**Kdy neměnit nic:** stránka i `/health` na přidělené URL fungují, TLS je OK — **Není nutné** mazat Traefik kvůli Caddy nebo naopak; u RB Universe jsou obě sady záměrně.
-
-**Readonly labels:** pokud Coolify má štítky jen ke čtení, změny dělejte přidáním domény v UI, nebo dočasně vypněte readonly (podle verze).
+**Volitelně (není potřeba pro vás):** pokud byste někdy chtěli **dvě domény** na jednu službu (např. sslip + vlastní), používá se rozšíření Traefik pravidla `Host(...) || Host(...)` — popis je v RB Universe v `docs/dual_domain_checklist.md`. Pro samotnou **invoice.exponentialsummit.cz** to nepotřebujete.
 
 ---
 
@@ -246,7 +252,7 @@ V **Red Button Universe** se pro dev/produkci nepoužívá jeden „skript“ v 
 
 Tam, kde spravujete zónu **exponentialsummit.cz**:
 
-- Vytvořte záznam pro **invoice** (typ **A** nebo **CNAME**) podle toho, co Coolify zobrazí u služby (cílová IP nebo hostname reverse proxy).
+- Vytvořte záznam pouze pro **invoice.exponentialsummit.cz** (typ **A** nebo **CNAME**) podle toho, co Coolify zobrazí u služby (cílová IP nebo hostname reverse proxy). Pro tento scénář **sslip.io nepotřebujete**.
 
 Propagace DNS může trvat řádově minuty až hodiny.
 
