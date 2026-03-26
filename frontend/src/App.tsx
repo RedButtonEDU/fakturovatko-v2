@@ -89,33 +89,16 @@ export default function App() {
     return Math.min(50, Math.max(1, n))
   }, [qtyInput])
 
-  /** Fallback když /api/event chybí — ceny stejně z releases (Ti.to) */
-  const priceDisplayMeta = useMemo(
-    () => eventMeta ?? { show_prices_ex_tax: false, currency: 'CZK' },
-    [eventMeta],
-  )
-
-  const ticketPriceBand = useMemo(() => {
-    if (!releases.length) return null
-    const incs = releases
-      .map((r) =>
-        r.price != null ? unitPrices(r.price, priceDisplayMeta.show_prices_ex_tax).inc : null,
-      )
-      .filter((x): x is number => x != null)
-    if (!incs.length) return null
-    return { min: Math.min(...incs), max: Math.max(...incs) }
-  }, [releases, priceDisplayMeta])
-
   const linePrices = useMemo(() => {
-    if (!selectedRelease || selectedRelease.price == null) return null
-    const u = unitPrices(selectedRelease.price, priceDisplayMeta.show_prices_ex_tax)
+    if (!eventMeta || !selectedRelease) return null
+    const u = unitPrices(selectedRelease.price, eventMeta.show_prices_ex_tax)
     return {
       unitEx: u.ex,
       unitInc: u.inc,
       totalEx: u.ex * quantityForTotals,
       totalInc: u.inc * quantityForTotals,
     }
-  }, [priceDisplayMeta, selectedRelease, quantityForTotals])
+  }, [eventMeta, selectedRelease, quantityForTotals])
 
   const countriesForUi = useMemo(() => orderCountriesForDisplay(countries, lang), [countries, lang])
 
@@ -194,7 +177,7 @@ export default function App() {
     }
   }
 
-  const currency = priceDisplayMeta.currency
+  const currency = eventMeta?.currency ?? 'CZK'
 
   return (
     <div className="page">
@@ -246,9 +229,9 @@ export default function App() {
                 {releases.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.title}
-                    {r.price != null
+                    {r.price != null && eventMeta
                       ? ` — ${formatMoney(
-                          unitPrices(r.price, priceDisplayMeta.show_prices_ex_tax).inc,
+                          unitPrices(r.price, eventMeta.show_prices_ex_tax).inc,
                           currency,
                         )} ${t(lang, 'priceWithVat')}`
                       : ''}
@@ -256,24 +239,6 @@ export default function App() {
                 ))}
               </select>
             </label>
-
-            {ticketPriceBand && (
-              <p className="field-hint">
-                {ticketPriceBand.min === ticketPriceBand.max ? (
-                  <>
-                    {t(lang, 'ticketPriceOne')}:{' '}
-                    <strong>{formatMoney(ticketPriceBand.min, currency)}</strong> {t(lang, 'priceWithVat')}
-                  </>
-                ) : (
-                  <>
-                    {t(lang, 'ticketPriceRange')}:{' '}
-                    <strong>{formatMoney(ticketPriceBand.min, currency)}</strong>
-                    {' – '}
-                    <strong>{formatMoney(ticketPriceBand.max, currency)}</strong> {t(lang, 'priceWithVat')}
-                  </>
-                )}
-              </p>
-            )}
 
             <label>
               {t(lang, 'quantity')}
@@ -300,10 +265,6 @@ export default function App() {
                 }}
               />
             </label>
-
-            {!selectedRelease && releases.length > 0 && (
-              <p className="field-hint">{t(lang, 'ticketPickForTotal')}</p>
-            )}
 
             {linePrices && (
               <div className="price-box">
