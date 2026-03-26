@@ -362,7 +362,6 @@ export default function App() {
                 <label>
                   {t(lang, 'vatId')}
                   <input value={vatId} onChange={(e) => setVatId(e.target.value)} />
-                  {country === 'SK' && <p className="field-hint">{t(lang, 'vatIdHintSk')}</p>}
                 </label>
                 <fieldset className="address-block">
                   <legend>{t(lang, 'address')}</legend>
