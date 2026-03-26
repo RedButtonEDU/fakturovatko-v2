@@ -6,6 +6,7 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.address_utils import billing_address_one_line
 from app.models import Order, OrderStatus
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
@@ -127,7 +128,7 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
                     company_name=order.company_name,
                     ico=order.company_registration,
                     dic=order.vat_id,
-                    address=order.address_line,
+                    address=billing_address_one_line(order) or None,
                 )
                 order.pipedrive_person_id = pid
                 order.pipedrive_org_id = oid

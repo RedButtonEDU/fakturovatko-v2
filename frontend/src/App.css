@@ -224,6 +224,33 @@
   cursor: not-allowed;
 }
 
+.address-block {
+  border: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.address-block legend {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-200);
+}
+
+.address-zip-city {
+  display: grid;
+  grid-template-columns: minmax(7rem, 9rem) 1fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+@media (max-width: 480px) {
+  .address-zip-city {
+    grid-template-columns: 1fr;
+  }
+}
+
 .ico-row {
   display: grid;
   grid-template-columns: 1fr auto;

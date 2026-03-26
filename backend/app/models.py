@@ -40,7 +40,9 @@ class Order(Base):
 
     # Billing
     invoice_to_company: Mapped[bool] = mapped_column(Boolean, default=False)
-    address_line: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    address_street: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    address_city: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    address_zip: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(String(2), nullable=True)
     company_registration: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # IČO
     vat_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # DIČ

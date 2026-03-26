@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -17,10 +18,24 @@ from app.services.pdf_mock import MOCK_PDF_BYTES
 router = APIRouter(prefix="/api", tags=["orders"])
 
 
+def _trim(s: Optional[str]) -> Optional[str]:
+    if s is None:
+        return None
+    t = s.strip()
+    return t or None
+
+
 def _validate_payload(body: OrderCreate) -> None:
+    def _addr_ok() -> bool:
+        return bool(
+            (body.address_street or "").strip()
+            and (body.address_city or "").strip()
+            and (body.address_zip or "").strip()
+        )
+
     if not body.invoice_to_company:
-        if not (body.address_line or "").strip():
-            raise HTTPException(422, "address_line is required for non-company invoice")
+        if not _addr_ok():
+            raise HTTPException(422, "address_street, address_city, address_zip are required")
     else:
         if not body.country_code:
             raise HTTPException(422, "country_code is required for company invoice")
@@ -28,8 +43,8 @@ def _validate_payload(body: OrderCreate) -> None:
             raise HTTPException(422, "company_registration (IČO) is required")
         if not (body.company_name or "").strip():
             raise HTTPException(422, "company_name is required")
-        if not (body.address_line or "").strip():
-            raise HTTPException(422, "address_line is required for company invoice")
+        if not _addr_ok():
+            raise HTTPException(422, "address_street, address_city, address_zip are required")
 
 
 @router.post("/orders", response_model=OrderOut)
@@ -49,7 +64,9 @@ def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         tito_release_slug=body.tito_release_slug.strip(),
         tito_release_title=body.tito_release_title.strip(),
         invoice_to_company=body.invoice_to_company,
-        address_line=body.address_line,
+        address_street=_trim(body.address_street),
+        address_city=_trim(body.address_city),
+        address_zip=_trim(body.address_zip),
         country_code=(body.country_code or "").upper() or None,
         company_registration=body.company_registration,
         vat_id=body.vat_id,

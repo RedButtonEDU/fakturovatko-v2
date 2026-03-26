@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
-from app.db import Base, engine
+from app.db import Base, engine, migrate_schema
 from app.routers import api_orders, api_public, health, internal
 
 settings = get_settings()
@@ -32,6 +32,7 @@ app.include_router(internal.router)
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    migrate_schema()
 
 
 static_dir = Path(__file__).resolve().parent / "static"

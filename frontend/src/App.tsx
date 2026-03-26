@@ -48,7 +48,9 @@ export default function App() {
   /** String so user can clear the field and type a new number; blur normalizes to 1–50 */
   const [qtyInput, setQtyInput] = useState('1')
   const [invoiceCompany, setInvoiceCompany] = useState(false)
-  const [address, setAddress] = useState('')
+  const [addressStreet, setAddressStreet] = useState('')
+  const [addressCity, setAddressCity] = useState('')
+  const [addressZip, setAddressZip] = useState('')
   const [country, setCountry] = useState('CZ')
   const [ico, setIco] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -111,8 +113,9 @@ export default function App() {
         return
       }
       if (data.company_name) setCompanyName(data.company_name)
-      const parts = [data.street, data.zip, data.city].filter(Boolean)
-      if (parts.length) setAddress(parts.join(', '))
+      if (data.street) setAddressStreet(data.street)
+      if (data.zip) setAddressZip(data.zip)
+      if (data.city) setAddressCity(data.city)
       if (data.vat_id) setVatId(data.vat_id)
     } catch {
       setErr(t(lang, country === 'SK' ? 'icoNotFoundSk' : 'icoNotFound'))
@@ -128,12 +131,14 @@ export default function App() {
       setErr(t(lang, 'required'))
       return
     }
-    if (!invoiceCompany && !address.trim()) {
+    const addrOk =
+      addressStreet.trim() !== '' && addressCity.trim() !== '' && addressZip.trim() !== ''
+    if (!invoiceCompany && !addrOk) {
       setErr(t(lang, 'required'))
       return
     }
     if (invoiceCompany) {
-      if (!country || !ico.trim() || !companyName.trim() || !address.trim()) {
+      if (!country || !ico.trim() || !companyName.trim() || !addrOk) {
         setErr(t(lang, 'required'))
         return
       }
@@ -152,7 +157,9 @@ export default function App() {
         tito_release_slug: selectedRelease.slug,
         tito_release_title: selectedRelease.title,
         invoice_to_company: invoiceCompany,
-        address_line: address || null,
+        address_street: addressStreet || null,
+        address_city: addressCity || null,
+        address_zip: addressZip || null,
         country_code: invoiceCompany ? country : null,
         company_registration: invoiceCompany ? ico : null,
         vat_id: vatId || null,
@@ -287,10 +294,39 @@ export default function App() {
             </label>
 
             {!invoiceCompany && (
-              <label>
-                {t(lang, 'address')}
-                <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} required />
-              </label>
+              <fieldset className="address-block">
+                <legend>{t(lang, 'address')}</legend>
+                <label>
+                  {t(lang, 'addressStreet')}
+                  <input
+                    value={addressStreet}
+                    onChange={(e) => setAddressStreet(e.target.value)}
+                    autoComplete="street-address"
+                    required
+                  />
+                </label>
+                <div className="address-zip-city">
+                  <label>
+                    {t(lang, 'addressZip')}
+                    <input
+                      value={addressZip}
+                      onChange={(e) => setAddressZip(e.target.value)}
+                      inputMode="text"
+                      autoComplete="postal-code"
+                      required
+                    />
+                  </label>
+                  <label>
+                    {t(lang, 'addressCity')}
+                    <input
+                      value={addressCity}
+                      onChange={(e) => setAddressCity(e.target.value)}
+                      autoComplete="address-level2"
+                      required
+                    />
+                  </label>
+                </div>
+              </fieldset>
             )}
 
             {invoiceCompany && (
@@ -323,10 +359,39 @@ export default function App() {
                   <input value={vatId} onChange={(e) => setVatId(e.target.value)} />
                   {country === 'SK' && <p className="field-hint">{t(lang, 'vatIdHintSk')}</p>}
                 </label>
-                <label>
-                  {t(lang, 'address')}
-                  <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} required />
-                </label>
+                <fieldset className="address-block">
+                  <legend>{t(lang, 'address')}</legend>
+                  <label>
+                    {t(lang, 'addressStreet')}
+                    <input
+                      value={addressStreet}
+                      onChange={(e) => setAddressStreet(e.target.value)}
+                      autoComplete="street-address"
+                      required
+                    />
+                  </label>
+                  <div className="address-zip-city">
+                    <label>
+                      {t(lang, 'addressZip')}
+                      <input
+                        value={addressZip}
+                        onChange={(e) => setAddressZip(e.target.value)}
+                        inputMode="text"
+                        autoComplete="postal-code"
+                        required
+                      />
+                    </label>
+                    <label>
+                      {t(lang, 'addressCity')}
+                      <input
+                        value={addressCity}
+                        onChange={(e) => setAddressCity(e.target.value)}
+                        autoComplete="address-level2"
+                        required
+                      />
+                    </label>
+                  </div>
+                </fieldset>
               </>
             )}
 

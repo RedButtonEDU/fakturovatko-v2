@@ -142,7 +142,9 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 
 2. **Mount path v kontejneru:** `/data`
 
-3. V proměnných musí být `DATABASE_URL=sqlite:////data/fakturovatko.sqlite3` (čtyři lomítka za `sqlite:` — cesta absolutní).
+3. Pole **Name** u volume zadejte jen **ASCII** (např. `fakturovatko-data`) — bez diakritiky a mezer. Název typu „Databáze“ způsobí chybu `docker compose` při validaci (`volumes additional properties … not allowed`).
+
+4. V proměnných musí být `DATABASE_URL=sqlite:////data/fakturovatko.sqlite3` (čtyři lomítka za `sqlite:` — cesta absolutní).
 
 Bez volume se data po redeployi smažou.
 
@@ -225,7 +227,13 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 - **DIČ** — 10 číslic, daňové identifikační číslo; **není** matematicky odvozené od IČO (proto ho aplikace z IČO „nevypočítá“).
 - **IČ DPH** (pro faktury v EU / osvobození) — formát **SK** + **stejných 10 číslic jako u DIČ** (příklad tvaru: `SK1234567890`).
 
-**Jak doplnit DIČ / IČ DPH:** ručně z fakturačních údajů firmy, z [overenia IČ DPH](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overovanie-ic-dph) / [VIES](https://ec.europa.eu/taxation_customs/vies/) (když už číslo znáte), nebo v budoucnu napojení na **OpenData API Finančnej správy** ([iz.opendata.financnasprava.sk](https://iz.opendata.financnasprava.sk/) — bezplatná registrace a klíč; zveřejňované seznamy platitelů DPH včetně vazby na IČO). Komerční služby (např. FirmAPI, Finstat) umí vyhledání podle IČO včetně DIČ.
+**Jak doplnit DIČ / IČ DPH:** ručně z fakturačních údajů firmy, z [overenia IČ DPH](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overovanie-ic-dph) / [VIES](https://ec.europa.eu/taxation_customs/vies/) (když už číslo znáte), nebo napojení na **OpenData Finančnej správy** (viz níže). Komerční služby (např. FirmAPI, Finstat) umí vyhledání podle IČO včetně DIČ.
+
+**Registrace k OpenData API (klíč pro vývojáře, ne daňové přihlášení):**
+
+- Portál: [opendata.financnasprava.sk](https://opendata.financnasprava.sk/) — anglická dokumentace a formulář **„Generate an API key“**: [en/page/openapi](https://opendata.financnasprava.sk/en/page/openapi). Po vyplnění povinných polí obdržíte **autorizační klíč**; v hlavičce požadavků: `key: <váš klíč>`. Technická dokumentace datasetů: [en/page/doc](https://opendata.financnasprava.sk/en/page/doc). Samostatné API **informačních seznamů** (DPH, dlužníci, …): [iz.opendata.financnasprava.sk](https://iz.opendata.financnasprava.sk/) (OpenAPI `/openapi.yaml`), příklad: `curl -H "key: …" https://iz.opendata.financnasprava.sk/api/lists`.
+- **Není to totéž** jako [registrace uživatele portálu FS](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/registracia-pouzivatela-portal) (ta je pro fyzické osoby komunikující s finanční správou — formulář, e-mail, často návštěva úřadu nebo slovensko.sk / eID). Pro **čtení otevřených dat přes API** jde o **vývojářskou registraci na portálu OpenData**, ne o slovenské daňové rezidentství.
+- **Zahraniční subjekty / vývojáři:** [podmínky použití](https://opendata.financnasprava.sk/page/licence) portálu jsou CC BY 4.0 a nevyžadují slovenské IČO ani rezidentství; klíč slouží hlavně k **limite volání** (standardně **1000 požadavků/hod.**; navýšení přes kontakt na portálu). Konkrétní pole registračního formuláře API se mění — pokud by formulář vyžadoval údaje, které nemáte, použijte kontakt v patičce portálu nebo [kontakt FS](https://www.financnasprava.sk/sk/kontakt).
 
 ---
 

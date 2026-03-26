@@ -45,7 +45,9 @@ export type OrderPayload = {
   tito_release_slug: string
   tito_release_title: string
   invoice_to_company: boolean
-  address_line?: string | null
+  address_street?: string | null
+  address_city?: string | null
+  address_zip?: string | null
   country_code?: string | null
   company_registration?: string | null
   vat_id?: string | null

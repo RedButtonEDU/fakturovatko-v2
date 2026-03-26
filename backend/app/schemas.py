@@ -11,7 +11,9 @@ class OrderCreate(BaseModel):
     tito_release_slug: str = Field(..., min_length=1, max_length=255)
     tito_release_title: str = Field(..., min_length=1, max_length=512)
     invoice_to_company: bool = False
-    address_line: Optional[str] = None
+    address_street: Optional[str] = None
+    address_city: Optional[str] = None
+    address_zip: Optional[str] = None
     country_code: Optional[str] = Field(None, min_length=2, max_length=2)
     company_registration: Optional[str] = None
     vat_id: Optional[str] = None
