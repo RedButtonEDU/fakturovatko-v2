@@ -74,16 +74,30 @@ def _pick_vat_list_slug(lists_payload: dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _pick_ico_column(searchable: list[Any]) -> Optional[str]:
-    """Vybere název sloupce pro vyhledání podle IČO."""
-    if not searchable:
+def _normalize_searchable_columns(searchable: Any) -> list[str]:
+    """API někdy vrací ``searchable`` jako řetězec ``\"ico,ic_dph\"`` místo pole."""
+    if searchable is None:
+        return []
+    if isinstance(searchable, str):
+        return [s.strip() for s in searchable.split(",") if s.strip()]
+    if isinstance(searchable, list):
+        return [str(c).strip() for c in searchable if str(c).strip()]
+    return []
+
+
+def _pick_ico_column(searchable_cols: list[str]) -> Optional[str]:
+    """Vybere název sloupce pro vyhledání podle IČO (preferuje ``ico``)."""
+    if not searchable_cols:
         return None
-    for col in searchable:
-        c = str(col).strip()
+    for prefer in ("ico", "ičo"):
+        for c in searchable_cols:
+            if c.lower() == prefer:
+                return c
+    for c in searchable_cols:
         cl = c.lower()
         if "ico" in cl or "ičo" in cl or "identifik" in cl:
             return c
-    return str(searchable[0]).strip() if searchable else None
+    return searchable_cols[0]
 
 
 def _normalize_lists_payload(data: Any) -> dict[str, Any]:
@@ -168,8 +182,8 @@ async def lookup_dic_by_ico(api_key: str, ico: str) -> Optional[str]:
         detail = await fetch_list_detail(api_key, slug)
         if not detail:
             return None
-        searchable = detail.get("searchable") or []
-        if not isinstance(searchable, list):
+        searchable = _normalize_searchable_columns(detail.get("searchable"))
+        if not searchable:
             return None
         col = _pick_ico_column(searchable)
         if not col:
