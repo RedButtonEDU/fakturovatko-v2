@@ -196,7 +196,6 @@
 }
 
 .secondary {
-  align-self: flex-end;
   padding: 0.55rem 1rem;
   border-radius: 0;
   border: 2px solid var(--rb-red);
@@ -251,11 +250,25 @@
   }
 }
 
+/* IČO + tlačítko ARES/RPO — bez marginu pod labelem, aby řádek končil u inputu */
 .ico-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: end;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.ico-row label {
+  flex: 1;
+  min-width: min(100%, 12rem);
+  margin-bottom: 0;
+}
+
+.ico-row .secondary {
+  flex-shrink: 0;
+  /* srovnat s .form input (padding 0.65rem) */
+  padding: 0.65rem 1rem;
 }
 
 .price-box {
