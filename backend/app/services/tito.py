@@ -76,23 +76,24 @@ async def create_discount_code(
     code = code or generate_discount_code()
     url = f"{TITO_BASE}/{account}/{event_slug}/discount_codes"
     params = {"version": "3.1"}
-    # Docs show JSON with bracket-string keys for simple fields; array params like
-    # release_ids[] are parsed reliably as application/x-www-form-urlencoded (Rails).
-    form: list[tuple[str, str]] = [
-        ("discount_code[code]", code),
-        ("discount_code[type]", "PercentOffDiscountCode"),
-        ("discount_code[value]", "100"),
-        ("discount_code[quantity]", str(quantity)),
-        ("discount_code[show_public_releases]", "only_attached"),
-        ("discount_code[show_secret_releases]", "if_discount_code_available"),
-        ("discount_code[release_ids][]", str(release_id)),
-    ]
+    # Admin API 3.1: bracket keys as JSON (see docs curl --data '{"discount_code[code]":...}').
+    # Use a scalar for discount_code[release_ids][] — a JSON array as the value causes 422.
+    # Must use json= (not data=): httpx AsyncClient rejects form body with data= (sync-only path).
+    body: dict[str, Any] = {
+        "discount_code[code]": code,
+        "discount_code[type]": "PercentOffDiscountCode",
+        "discount_code[value]": 100,
+        "discount_code[quantity]": quantity,
+        "discount_code[show_public_releases]": "only_attached",
+        "discount_code[show_secret_releases]": "if_discount_code_available",
+        "discount_code[release_ids][]": release_id,
+    }
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.post(
             url,
-            headers=_headers(api_key),
+            headers={**_headers(api_key), "Content-Type": "application/json"},
             params=params,
-            data=form,
+            json=body,
         )
         if r.is_error:
             snippet = (r.text or "")[:2500]
