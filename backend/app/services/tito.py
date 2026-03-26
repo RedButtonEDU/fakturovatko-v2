@@ -76,7 +76,8 @@ async def create_discount_code(
     code = code or generate_discount_code()
     url = f"{TITO_BASE}/{account}/{event_slug}/discount_codes"
     params = {"version": "3.1"}
-    # Ti.to expects JSON with bracket keys (see Admin API 3.1 docs)
+    # Admin API 3.1: same bracket keys as curl examples. For `release_ids` each id is one
+    # `discount_code[release_ids][]` scalar — a JSON *array* as the value breaks validation (422).
     body: dict[str, Any] = {
         "discount_code[code]": code,
         "discount_code[type]": "PercentOffDiscountCode",
@@ -84,7 +85,7 @@ async def create_discount_code(
         "discount_code[quantity]": quantity,
         "discount_code[show_public_releases]": "only_attached",
         "discount_code[show_secret_releases]": "if_discount_code_available",
-        "discount_code[release_ids][]": [release_id],
+        "discount_code[release_ids][]": release_id,
     }
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.post(
@@ -93,5 +94,7 @@ async def create_discount_code(
             params=params,
             json=body,
         )
-        r.raise_for_status()
+        if r.is_error:
+            snippet = (r.text or "")[:2500]
+            raise RuntimeError(f"Ti.to discount_codes {r.status_code}: {snippet}") from None
         return r.json()
