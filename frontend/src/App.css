@@ -250,24 +250,34 @@
   }
 }
 
-/* IČO + tlačítko ARES/RPO — bez marginu pod labelem, aby řádek končil u inputu */
+/* IČO: popisek samostatně, input + tlačítko v jednom řádku (žádné zalomení tlačítka pod input) */
 .ico-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-end;
   margin-bottom: 1rem;
 }
 
-.ico-row label {
-  flex: 1;
-  min-width: min(100%, 12rem);
-  margin-bottom: 0;
+.form .ico-row-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-200);
 }
 
-.ico-row .secondary {
+.ico-row-inner {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ico-row-inner input {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0; /* odstup řeší .ico-row-label, ne vnořený label */
+}
+
+.ico-row-inner .secondary {
   flex-shrink: 0;
-  /* srovnat s .form input (padding 0.65rem) */
   padding: 0.65rem 1rem;
 }
 

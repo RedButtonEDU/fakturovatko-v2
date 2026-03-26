@@ -351,13 +351,21 @@ export default function App() {
             {invoiceCompany && (
               <>
                 <div className="ico-row">
-                  <label>
+                  <label className="ico-row-label" htmlFor="order-ico">
                     {t(lang, 'ico')}
-                    <input value={ico} onChange={(e) => setIco(e.target.value)} />
                   </label>
-                  <button type="button" className="secondary" onClick={onLookupIco} disabled={icoLoading}>
-                    {icoLoading ? '…' : t(lang, country === 'SK' ? 'lookupRpo' : 'lookup')}
-                  </button>
+                  <div className="ico-row-inner">
+                    <input
+                      id="order-ico"
+                      value={ico}
+                      onChange={(e) => setIco(e.target.value)}
+                      inputMode="numeric"
+                      autoComplete="off"
+                    />
+                    <button type="button" className="secondary" onClick={onLookupIco} disabled={icoLoading}>
+                      {icoLoading ? '…' : t(lang, country === 'SK' ? 'lookupRpo' : 'lookup')}
+                    </button>
+                  </div>
                 </div>
                 <label>
                   {t(lang, 'companyName')}
