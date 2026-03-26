@@ -44,6 +44,8 @@ export type OrderPayload = {
   tito_release_id: number
   tito_release_slug: string
   tito_release_title: string
+  /** Jednotková cena vstupenky v Kč (pro Allfred fakturu) */
+  ticket_unit_price_czk?: number | null
   invoice_to_company: boolean
   address_street?: string | null
   address_city?: string | null

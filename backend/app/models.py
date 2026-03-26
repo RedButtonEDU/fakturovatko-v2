@@ -37,6 +37,8 @@ class Order(Base):
     tito_release_id: Mapped[int] = mapped_column(Integer)
     tito_release_slug: Mapped[str] = mapped_column(String(255))
     tito_release_title: Mapped[str] = mapped_column(String(512))
+    # Jednotková cena vstupenky v Kč (pro Allfred fakturu); z frontendu při objednávce
+    ticket_unit_price_czk: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     # Billing
     invoice_to_company: Mapped[bool] = mapped_column(Boolean, default=False)

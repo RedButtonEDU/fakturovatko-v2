@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     allfred_workspace: str = "redbuttonedu"
     # Dev: treat mock proformas as paid in cron job
     allfred_mock_paid: bool = False
+    # quickSetupClientProjectInvoice (see docs in Allfred invoices - Equilibrium / allfred_api.md)
+    allfred_workspace_company_id: Optional[str] = None
+    allfred_team_id: Optional[str] = None
+    allfred_project_manager_id: Optional[str] = None
+    allfred_quick_setup_error_email: Optional[str] = None
+    # VAT rate as Allfred BigInt (e.g. 2100 = 21 %)
+    allfred_invoice_vat_rate: int = 2100
+    # Jednotková cena v Kč, pokud objednávka nemá ticket_unit_price_czk (starší řádky)
+    allfred_fallback_unit_price_czk: float = 1000.0
 
     # Gmail (same pattern as RB Universe)
     google_client_id: Optional[str] = None

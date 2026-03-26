@@ -64,6 +64,7 @@ def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         tito_release_id=body.tito_release_id,
         tito_release_slug=body.tito_release_slug.strip(),
         tito_release_title=body.tito_release_title.strip(),
+        ticket_unit_price_czk=body.ticket_unit_price_czk,
         invoice_to_company=body.invoice_to_company,
         address_street=_trim(body.address_street),
         address_city=_trim(body.address_city),

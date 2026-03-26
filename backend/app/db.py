@@ -34,6 +34,8 @@ def migrate_schema() -> None:
                     "AND address_line IS NOT NULL AND TRIM(address_line) != ''"
                 )
             )
+        if "ticket_unit_price_czk" not in cols:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN ticket_unit_price_czk REAL"))
 
 
 def get_db():

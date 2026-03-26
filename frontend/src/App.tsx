@@ -160,6 +160,10 @@ export default function App() {
         tito_release_id: selectedRelease.id,
         tito_release_slug: selectedRelease.slug,
         tito_release_title: selectedRelease.title,
+        ticket_unit_price_czk:
+          selectedRelease.price != null && !Number.isNaN(selectedRelease.price)
+            ? selectedRelease.price
+            : null,
         invoice_to_company: invoiceCompany,
         address_street: addressStreet || null,
         address_city: addressCity || null,

@@ -190,14 +190,31 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             )
             # endregion
 
-            # Final invoice (mock or match)
-            inv = None
-            if invoices:
+            # Final invoice: Allfred quick setup (new), or match existing outgoing invoice, or mock id
+            final_invoice_id: Optional[str] = None
+            pdf_bytes: Optional[bytes] = None
+
+            if allfred_svc.quick_setup_ready():
+                try:
+                    qsr = await allfred_svc.quick_setup_client_project_invoice(order)
+                    oi = (qsr.get("outgoingInvoice") or {}) if isinstance(qsr, dict) else {}
+                    if oi.get("id"):
+                        final_invoice_id = str(oi["id"])
+                        pdf_bytes = await allfred_svc.resolve_outgoing_invoice_pdf_bytes(oi)
+                except Exception as e:
+                    logger.warning("Allfred quickSetupClientProjectInvoice failed: %s", e)
+
+            if not final_invoice_id and invoices:
                 inv = _find_invoice_for_project(invoices, project_ids)
-            if inv:
-                order.allfred_final_invoice_id = str(inv.get("id"))
-            else:
-                order.allfred_final_invoice_id = f"mock-final-{order.public_id[:8]}"
+                if inv:
+                    final_invoice_id = str(inv.get("id"))
+                    pdf_bytes = await allfred_svc.download_outgoing_invoice_pdf_by_id(final_invoice_id)
+
+            if not final_invoice_id:
+                final_invoice_id = f"mock-final-{order.public_id[:8]}"
+            order.allfred_final_invoice_id = final_invoice_id
+            if pdf_bytes is None:
+                pdf_bytes = MOCK_PDF_BYTES
 
             db.commit()
 
@@ -209,6 +226,7 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                 data={
                     "order_prefix": order.public_id[:8],
                     "gmail_configured": bool(s.gmail_refresh_token),
+                    "allfred_invoice": not str(final_invoice_id).startswith("mock-final-"),
                 },
             )
             # endregion
@@ -225,7 +243,7 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                     order.email,
                     "Exponential Summit – faktura a slevový kód",
                     body,
-                    attachment_bytes=MOCK_PDF_BYTES,
+                    attachment_bytes=pdf_bytes,
                     attachment_name=f"faktura-{order.public_id[:8]}.pdf",
                 )
             # region agent log

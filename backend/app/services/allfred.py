@@ -1,10 +1,15 @@
 """Allfred Workspace GraphQL API."""
 
+import logging
+from datetime import date
 from typing import Any, Optional
 
 import httpx
 
 from app.config import get_settings
+from app.models import Order
+
+logger = logging.getLogger(__name__)
 
 OUTGOING_PROFORMA_QUERY = """
 query OutgoingProformaInvoices($page: Int!) {
@@ -28,6 +33,27 @@ query OutgoingInvoices($page: Int!) {
       projects { id title code }
       client { id name }
     }
+  }
+}
+"""
+
+QUICK_SETUP_MUTATION = """
+mutation QuickSetup($input: QuickSetupInput!) {
+  quickSetupClientProjectInvoice(input: $input) {
+    outgoingInvoice {
+      id
+      invoice_no
+      invoicePdf { download preview }
+    }
+  }
+}
+"""
+
+OUTGOING_INVOICE_PDF_QUERY = """
+query OutgoingInvoicePdf($id: ID!) {
+  outgoingInvoice(id: $id) {
+    id
+    invoicePdf { download preview }
   }
 }
 """
@@ -106,3 +132,164 @@ def mock_create_proforma_invoice(order_public_id: str) -> dict[str, str]:
         "id": f"mock-proforma-{order_public_id[:8]}",
         "project_id": f"mock-project-{order_public_id[:8]}",
     }
+
+
+def quick_setup_ready() -> bool:
+    """Allfred quickSetupClientProjectInvoice requires these settings (see Equilibrium allfred_api.md)."""
+    s = get_settings()
+    return bool(
+        s.allfred_api_key
+        and s.allfred_workspace_company_id
+        and s.allfred_team_id
+        and s.allfred_project_manager_id
+        and s.allfred_quick_setup_error_email
+    )
+
+
+def _split_contact_name(full_name: str) -> tuple[str, str]:
+    parts = full_name.strip().split()
+    if not parts:
+        return "?", "?"
+    if len(parts) == 1:
+        return parts[0], parts[0]
+    return parts[0], parts[-1]
+
+
+def unit_price_hellers(order: Order) -> int:
+    s = get_settings()
+    czk = order.ticket_unit_price_czk if order.ticket_unit_price_czk is not None else s.allfred_fallback_unit_price_czk
+    return int(round(float(czk) * 100))
+
+
+def build_quick_setup_input(order: Order) -> dict[str, Any]:
+    """Build QuickSetupInput for GraphQL (amounts in haléřích)."""
+    s = get_settings()
+    today = date.today().isoformat()
+    fn, ln = _split_contact_name(order.full_name)
+    street = (order.address_street or "").strip()
+    city = (order.address_city or "").strip()
+    zipc = (order.address_zip or "").strip()
+    cc = (order.country_code or "CZ").upper()
+    email = order.email.strip()
+
+    if order.invoice_to_company:
+        cn = (order.company_name or "").strip() or order.full_name.strip()
+        client_data: dict[str, Any] = {
+            "client_name": cn,
+            "legal_name": cn,
+            "street": street,
+            "city": city,
+            "zip": zipc,
+            "country_iso": cc,
+            "language": "cs",
+            "contact_first_name": fn,
+            "contact_last_name": ln,
+            "contact_email": email,
+        }
+        reg = (order.company_registration or "").strip()
+        if reg:
+            client_data["reg_no"] = reg
+        vat = (order.vat_id or "").strip()
+        if vat:
+            client_data["vat_no"] = vat
+    else:
+        nm = order.full_name.strip()
+        client_data = {
+            "client_name": nm,
+            "legal_name": nm,
+            "street": street,
+            "city": city,
+            "zip": zipc,
+            "country_iso": cc,
+            "language": "cs",
+            "contact_first_name": fn,
+            "contact_last_name": ln,
+            "contact_email": email,
+        }
+
+    uh = unit_price_hellers(order)
+    if uh <= 0:
+        raise ValueError("unit price must be positive for Allfred invoice")
+
+    inp: dict[str, Any] = {
+        "client_data": client_data,
+        "project": {
+            "title": f"Exponential Summit 2026 — {order.tito_release_title} ({order.public_id[:8]})",
+            "billable": True,
+            "project_manager_id": s.allfred_project_manager_id,
+            "team_id": s.allfred_team_id,
+            "start_date": today,
+        },
+        "invoice": {
+            "issue_date": today,
+            "due_date": today,
+            "date_of_supply": today,
+            "workspace_company_id": s.allfred_workspace_company_id,
+            "currency_iso": "CZK",
+            "send_oi": False,
+            "paid": True,
+            "vat_rate": s.allfred_invoice_vat_rate,
+            "invoice_items": [
+                {
+                    "description": f"{order.tito_release_title} — Exponential Summit 2026",
+                    "unit_price": uh,
+                    "quantity": float(order.ticket_quantity),
+                }
+            ],
+            "note": f"Objednávka Exponential Summit {order.public_id}",
+        },
+        "error_email": s.allfred_quick_setup_error_email,
+    }
+    return inp
+
+
+async def quick_setup_client_project_invoice(order: Order) -> dict[str, Any]:
+    """Create client + project + outgoing invoice via Allfred quick setup."""
+    variables = {"input": build_quick_setup_input(order)}
+    data = await _graphql(QUICK_SETUP_MUTATION, variables)
+    block = data.get("quickSetupClientProjectInvoice") or {}
+    oi = block.get("outgoingInvoice")
+    if not oi or not oi.get("id"):
+        raise RuntimeError(f"quickSetupClientProjectInvoice unexpected response: {data}")
+    return block
+
+
+async def fetch_outgoing_invoice_download_url(invoice_id: str) -> Optional[str]:
+    data = await _graphql(OUTGOING_INVOICE_PDF_QUERY, {"id": str(invoice_id)})
+    oi = data.get("outgoingInvoice") or {}
+    ipdf = oi.get("invoicePdf") or {}
+    return ipdf.get("download")
+
+
+async def download_pdf_from_url(url: str) -> bytes:
+    """Download PDF; retry with Bearer if URL requires workspace auth."""
+    s = get_settings()
+    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+        r = await client.get(url)
+        if r.status_code == 401 and s.allfred_api_key:
+            r = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {s.allfred_api_key}"},
+            )
+        r.raise_for_status()
+        return r.content
+
+
+async def resolve_outgoing_invoice_pdf_bytes(outgoing_invoice: dict[str, Any]) -> Optional[bytes]:
+    """Use download URL from mutation response or query outgoingInvoice by id."""
+    ipdf = outgoing_invoice.get("invoicePdf") or {}
+    url = ipdf.get("download")
+    oid = outgoing_invoice.get("id")
+    if not url and oid:
+        url = await fetch_outgoing_invoice_download_url(str(oid))
+    if not url:
+        logger.warning("Allfred outgoing invoice %s has no PDF download URL", oid)
+        return None
+    return await download_pdf_from_url(url)
+
+
+async def download_outgoing_invoice_pdf_by_id(invoice_id: str) -> Optional[bytes]:
+    url = await fetch_outgoing_invoice_download_url(invoice_id)
+    if not url:
+        return None
+    return await download_pdf_from_url(url)
