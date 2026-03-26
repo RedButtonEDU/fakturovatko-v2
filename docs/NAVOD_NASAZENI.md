@@ -128,11 +128,16 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `GOOGLE_CLIENT_SECRET` | ano* | OAuth secret |
 | `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro účet **hello@redbuttonedu.cz** |
 | `PIPEDRIVE_API_TOKEN` | ano | API token (uživatel s právy zápisu) |
+| `OPENDATA_FS` | ne | API klíč z [OpenData FS](https://opendata.financnasprava.sk/en/page/openapi) — doplnění **IČ DPH** (DIČ) při načtení slovenského IČO z RPO; bez klíče zůstane pole DIČ prázdné |
 | `ALLFRED_MOCK_PAID` | ne | Produkce: `false`; pro test mock flow: `true` |
 
 \* Bez Gmail proměnných odeslání e-mailu selže; aplikace při chybě může vracet 503 u odeslání objednávky.
 
 Úplný přehled je také v souboru [`env.example`](../env.example) v kořeni repa.
+
+Po nastavení **`OPENDATA_FS`** a redeployi lze ověřit klíč interním endpointem (stejný token jako u cronu):  
+`curl -fsS -H "X-Cron-Token: $CRON_SECRET" http://localhost:8000/internal/opendata-fs`  
+(v produkci přes HTTPS na `localhost:8000` uvnitř kontejneru v Coolify). Odpověď `ok: true` znamená, že volání `GET …/api/lists` s klíčem funguje.
 
 ---
 
@@ -227,7 +232,7 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 - **DIČ** — 10 číslic, daňové identifikační číslo; **není** matematicky odvozené od IČO (proto ho aplikace z IČO „nevypočítá“).
 - **IČ DPH** (pro faktury v EU / osvobození) — formát **SK** + **stejných 10 číslic jako u DIČ** (příklad tvaru: `SK1234567890`).
 
-**Jak doplnit DIČ / IČ DPH:** ručně z fakturačních údajů firmy, z [overenia IČ DPH](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overovanie-ic-dph) / [VIES](https://ec.europa.eu/taxation_customs/vies/) (když už číslo znáte), nebo napojení na **OpenData Finančnej správy** (viz níže). Komerční služby (např. FirmAPI, Finstat) umí vyhledání podle IČO včetně DIČ.
+**Jak doplnit DIČ / IČ DPH:** při nastaveném **`OPENDATA_FS`** aplikace při „Načíst z RPO“ zkusí **DIČ** doplnit z informačního seznamu registrovaných plátců DPH (formát `SK` + 10 číslic). Jinak ručně z fakturačních údajů firmy, z [overenia IČ DPH](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overovanie-ic-dph) / [VIES](https://ec.europa.eu/taxation_customs/vies/) (když už číslo znáte), nebo komerční služby (např. FirmAPI, Finstat) umí vyhledání podle IČO včetně DIČ.
 
 **Registrace k OpenData API (klíč pro vývojáře, ne daňové přihlášení):**
 

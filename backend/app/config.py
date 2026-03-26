@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     # VAT (Czech default for CZK tickets)
     default_vat_rate: float = 0.21
 
+    # OpenData FS (SK) — IČ DPH z informačních seznamů; hlavička ``key`` u iz.opendata.financnasprava.sk
+    opendata_fs: Optional[str] = None
+
 
 @lru_cache
 def get_settings() -> Settings:

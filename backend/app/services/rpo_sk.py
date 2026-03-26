@@ -7,9 +7,15 @@ DIČ / IČ DPH: odpoveď RPO **neobsahuje** daňové čísla. DIČ (10 číslic)
 **nie sú** matematicky odvodené od IČO — dopĺňajú sa ručne alebo z iného zdroja (OpenData FS, komerčné API).
 """
 
+import logging
 from typing import Any, Optional
 
 import httpx
+
+from app.config import get_settings
+from app.services import opendata_fs_sk
+
+logger = logging.getLogger(__name__)
 
 STATISTICS_SK_SEARCH = "https://api.statistics.sk/rpo/v1/search"
 
@@ -94,4 +100,13 @@ async def lookup_sk_ico(ico: str) -> Optional[dict[str, Any]]:
     first = results[0]
     if not isinstance(first, dict):
         return None
-    return _parse_result(first)
+    parsed = _parse_result(first)
+    key = get_settings().opendata_fs
+    if key:
+        try:
+            dic = await opendata_fs_sk.lookup_dic_by_ico(key, digits)
+            if dic:
+                parsed["vat_id"] = f"SK{dic}"
+        except Exception as e:
+            logger.debug("OpenData FS IČ DPH lookup failed: %s", e)
+    return parsed
