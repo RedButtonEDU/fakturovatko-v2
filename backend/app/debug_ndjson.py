@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -37,10 +38,18 @@ def log(
         "data": data or {},
         "runId": run_id,
     }
+    line = json.dumps(payload, ensure_ascii=False) + "\n"
+    # Primary: stdout — visible in docker logs / Coolify without mounting files.
+    try:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+    except Exception:
+        pass
+    # Secondary: workspace .cursor file when path exists (local Cursor debug session).
     try:
         lp = _log_path()
         lp.parent.mkdir(parents=True, exist_ok=True)
         with lp.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            f.write(line)
     except Exception:
         pass
