@@ -272,6 +272,10 @@ Objednávky z formuláře mají v DB jen **mock** odkazy (`mock-proforma-…` / 
 
 4. Očekávaný výsledek: Ti.to slevový kód, e-mail s finální fakturou (náhled PDF), zápis do Pipedrive, stav objednávky **dokončeno** (vyžaduje nakonfigurované `TITO_API_KEY`, Gmail, případně Pipedrive podle prostředí).
 
+Odpověď jobu obsahuje i **`last_errors`** (text výjimky) a **`skipped`** (objednávky přeskočené — např. mock bez `ALLFRED_MOCK_PAID`, nebo proforma v Allfredovi ještě nezaplacená). Typická chyba při simulaci: **`TITO_API_KEY missing`** nebo chyba API Ti.to.
+
+Po selhání má objednávka stav **`error`** a job ji znovu nevezme. Po opravě konfigurace buď vytvořte novou testovací objednávku, nebo v SQLite ručně vraťte řádek do fronty: `status = 'awaiting_payment'`, `last_error = NULL` (a případně `tito_discount_code` vyprázdněte).
+
 ---
 
 ## 12. Pipedrive

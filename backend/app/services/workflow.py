@@ -32,11 +32,13 @@ def _find_invoice_for_project(
     return None
 
 
-async def process_paid_orders(db: Session) -> dict[str, int]:
+async def process_paid_orders(db: Session) -> dict[str, Any]:
     """Poll Allfred for orders awaiting payment; complete flow."""
     s = get_settings()
     processed = 0
     errors = 0
+    skipped = 0
+    last_errors: list[str] = []
 
     orders = (
         db.query(Order)
@@ -44,7 +46,7 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
         .all()
     )
     if not orders:
-        return {"checked": 0, "completed": 0, "errors": 0}
+        return {"checked": 0, "completed": 0, "errors": 0, "skipped": 0, "last_errors": []}
 
     def _needs_allfred_fetch(o: Order) -> bool:
         pid = o.allfred_proforma_id
@@ -57,13 +59,25 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
     if needs_allfred:
         if not s.allfred_api_key:
             logger.error("Orders with real Allfred proforma IDs require ALLFRED_API_KEY")
-            return {"checked": len(orders), "completed": 0, "errors": len(orders)}
+            return {
+                "checked": len(orders),
+                "completed": 0,
+                "errors": len(orders),
+                "skipped": 0,
+                "last_errors": ["ALLFRED_API_KEY required for non-mock proforma IDs"],
+            }
         try:
             proformas = await allfred_svc.fetch_all_proformas()
             invoices = await allfred_svc.fetch_all_invoices()
         except Exception as e:
             logger.exception("Allfred fetch failed: %s", e)
-            return {"checked": len(orders), "completed": 0, "errors": len(orders)}
+            return {
+                "checked": len(orders),
+                "completed": 0,
+                "errors": len(orders),
+                "skipped": 0,
+                "last_errors": [f"Allfred fetch: {e!s}"[:500]],
+            }
 
     pf_by_id = {str(p.get("id")): p for p in proformas if p.get("id")}
 
@@ -72,15 +86,18 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
             pf_id = order.allfred_proforma_id
             if not pf_id or str(pf_id).startswith("mock-"):
                 if not s.allfred_mock_paid:
+                    skipped += 1
                     continue
                 paid = True
                 project_ids = {order.allfred_project_id or "mock"}
             else:
                 pf = pf_by_id.get(str(pf_id))
                 if not pf:
+                    skipped += 1
                     continue
                 paid = _proforma_paid(pf)
                 if not paid:
+                    skipped += 1
                     continue
                 project_ids = set(allfred_svc.find_project_ids(pf))
 
@@ -147,9 +164,17 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
             processed += 1
         except Exception as e:
             logger.exception("Order %s failed: %s", order.public_id, e)
-            order.last_error = str(e)
+            msg = str(e)
+            order.last_error = msg
             order.status = OrderStatus.error.value
             db.commit()
             errors += 1
+            last_errors.append(f"{order.public_id[:8]}…: {msg[:400]}")
 
-    return {"checked": len(orders), "completed": processed, "errors": errors}
+    return {
+        "checked": len(orders),
+        "completed": processed,
+        "errors": errors,
+        "skipped": skipped,
+        "last_errors": last_errors,
+    }
