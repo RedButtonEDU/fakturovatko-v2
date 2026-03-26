@@ -62,6 +62,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     icoNotFound: 'Subjekt s tímto IČO nebyl nalezen.',
     icoNotFoundSk: 'Subjekt s tímto IČO nebyl nalezen v registru RPO (ŠÚ SR).',
     required: 'Vyplňte povinná pole.',
+    ticketPriceRange: 'Jednotlivé vstupenky',
+    ticketPriceOne: 'Cena vstupenky',
+    ticketPickForTotal:
+      'Vyberte typ vstupenky a počet — pod polem počtu se zobrazí celková částka za objednávku.',
   },
   en: {
     title: 'Ticket order',
@@ -93,6 +97,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     icoNotFound: 'No company found for this registration number.',
     icoNotFoundSk: 'No company found in the Slovak RPO register (ŠÚ SR) for this ID.',
     required: 'Please fill in required fields.',
+    ticketPriceRange: 'Ticket prices',
+    ticketPriceOne: 'Ticket price',
+    ticketPickForTotal: 'Select ticket type and quantity — the order total appears below the quantity field.',
   },
 }
 

@@ -1,5 +1,7 @@
 """Public API: releases, countries, ARES lookup."""
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 
 from app.config import get_settings
@@ -9,6 +11,25 @@ from app.services import tito as tito_svc
 from app.services.ares import lookup_ico
 
 router = APIRouter(prefix="/api", tags=["api"])
+
+
+def _release_unit_price(rel: dict) -> Optional[float]:
+    """Ti.to někdy vrací jen ``display_price`` nebo ``suggested_donation`` místo ``price``."""
+    for key in ("price", "display_price"):
+        v = rel.get(key)
+        if v is None or v == "":
+            continue
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            continue
+    sd = rel.get("suggested_donation")
+    if sd is not None and str(sd).strip():
+        try:
+            return float(str(sd).replace(",", "."))
+        except ValueError:
+            return None
+    return None
 
 
 @router.get("/event")
@@ -36,12 +57,13 @@ async def list_releases():
             rid = int(rel.get("id"))
         except (TypeError, ValueError):
             continue
+        pu = _release_unit_price(rel)
         out.append(
             ReleaseOut(
                 id=rid,
                 slug=str(rel.get("slug") or ""),
                 title=str(rel.get("title") or rel.get("name") or ""),
-                price=float(rel["price"]) if rel.get("price") is not None else None,
+                price=pu,
                 state=str(rel.get("state_name") or rel.get("state") or ""),
                 secret=bool(rel.get("secret")) if rel.get("secret") is not None else False,
             )
