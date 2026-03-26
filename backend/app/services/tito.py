@@ -76,17 +76,19 @@ async def create_discount_code(
     code = code or generate_discount_code()
     url = f"{TITO_BASE}/{account}/{event_slug}/discount_codes"
     params = {"version": "3.1"}
-    # Admin API 3.1: bracket keys as JSON (see docs curl --data '{"discount_code[code]":...}').
-    # Use a scalar for discount_code[release_ids][] — a JSON array as the value causes 422.
-    # Must use json= (not data=): httpx AsyncClient rejects form body with data= (sync-only path).
+    # JSON requests must use a nested `discount_code` object (Rails strong params).
+    # Flat keys like "discount_code[code]" work in curl --data strings but not as JSON keys — Ti.to
+    # then returns 422 "param is missing: discount_code". release_ids: integer array (API 3.1).
     body: dict[str, Any] = {
-        "discount_code[code]": code,
-        "discount_code[type]": "PercentOffDiscountCode",
-        "discount_code[value]": 100,
-        "discount_code[quantity]": quantity,
-        "discount_code[show_public_releases]": "only_attached",
-        "discount_code[show_secret_releases]": "if_discount_code_available",
-        "discount_code[release_ids][]": release_id,
+        "discount_code": {
+            "code": code,
+            "type": "PercentOffDiscountCode",
+            "value": 100,
+            "quantity": quantity,
+            "show_public_releases": "only_attached",
+            "show_secret_releases": "if_discount_code_available",
+            "release_ids": [release_id],
+        }
     }
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.post(
