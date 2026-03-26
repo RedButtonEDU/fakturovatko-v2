@@ -129,7 +129,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro účet **hello@redbuttonedu.cz** |
 | `PIPEDRIVE_API_TOKEN` | ano | API token (uživatel s právy zápisu) |
 | `OPENDATA_FS` | ne | API klíč z [OpenData FS](https://opendata.financnasprava.sk/en/page/openapi) — doplnění **IČ DPH** (DIČ) při načtení slovenského IČO z RPO; bez klíče zůstane pole DIČ prázdné |
-| `ALLFRED_MOCK_PAID` | ne | Produkce: `false`; pro test mock flow: `true` |
+| `ALLFRED_MOCK_PAID` | ne | Produkce: `false`. `true` = simulace zaplacení u mock proformy — viz [§11](#11-alfred) |
 
 \* Bez Gmail proměnných odeslání e-mailu selže; aplikace při chybě může vracet 503 u odeslání objednávky.
 
@@ -257,6 +257,20 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 1. Z Allfred Workspace získejte **API klíč** pro GraphQL (`workspace-api`).
 
 2. Nastavte `ALLFRED_API_KEY` a `ALLFRED_WORKSPACE` (subdoména před `-api.allfred.io`).
+
+### Simulace druhé fáze (zaplacená proforma bez skutečné proformy v Allfredovi)
+
+Objednávky z formuláře mají v DB jen **mock** odkazy (`mock-proforma-…` / `mock-project-…`) — reálná proforma v Allfredovi nevzniká.
+
+1. Nastavte **`ALLFRED_MOCK_PAID=true`** (v Coolify nebo lokálně). V produkci nechte **`false`**, jinak by se „zaplacené“ chovaly i mock objednávky.
+
+2. Pokud jsou ve frontě **jen** objednávky s mock proformou, aplikace **nevolá** Allfred GraphQL — stačí mít prázdný `ALLFRED_API_KEY` pro čistou simulaci. Jakmile budete mít v Allfredovi skutečné proformy, nastavte klíč a `ALLFRED_MOCK_PAID=false`.
+
+3. Spusťte job stejně jako cron:  
+   `curl -fsS -X POST -H "X-Cron-Token: $CRON_SECRET" http://localhost:8000/internal/jobs/poll-payments`  
+   (v Coolify uvnitř kontejneru, nebo přes HTTPS s platným tokenem).
+
+4. Očekávaný výsledek: Ti.to slevový kód, e-mail s finální fakturou (náhled PDF), zápis do Pipedrive, stav objednávky **dokončeno** (vyžaduje nakonfigurované `TITO_API_KEY`, Gmail, případně Pipedrive podle prostředí).
 
 ---
 

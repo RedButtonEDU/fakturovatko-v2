@@ -46,9 +46,18 @@ async def process_paid_orders(db: Session) -> dict[str, int]:
     if not orders:
         return {"checked": 0, "completed": 0, "errors": 0}
 
+    def _needs_allfred_fetch(o: Order) -> bool:
+        pid = o.allfred_proforma_id
+        return bool(pid) and not str(pid).startswith("mock-")
+
+    needs_allfred = any(_needs_allfred_fetch(o) for o in orders)
+
     proformas: list[dict[str, Any]] = []
     invoices: list[dict[str, Any]] = []
-    if s.allfred_api_key:
+    if needs_allfred:
+        if not s.allfred_api_key:
+            logger.error("Orders with real Allfred proforma IDs require ALLFRED_API_KEY")
+            return {"checked": len(orders), "completed": 0, "errors": len(orders)}
         try:
             proformas = await allfred_svc.fetch_all_proformas()
             invoices = await allfred_svc.fetch_all_invoices()
