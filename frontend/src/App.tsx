@@ -133,12 +133,16 @@ export default function App() {
     }
     const addrOk =
       addressStreet.trim() !== '' && addressCity.trim() !== '' && addressZip.trim() !== ''
+    if (!country) {
+      setErr(t(lang, 'required'))
+      return
+    }
     if (!invoiceCompany && !addrOk) {
       setErr(t(lang, 'required'))
       return
     }
     if (invoiceCompany) {
-      if (!country || !ico.trim() || !companyName.trim() || !addrOk) {
+      if (!ico.trim() || !companyName.trim() || !addrOk) {
         setErr(t(lang, 'required'))
         return
       }
@@ -160,7 +164,7 @@ export default function App() {
         address_street: addressStreet || null,
         address_city: addressCity || null,
         address_zip: addressZip || null,
-        country_code: invoiceCompany ? country : null,
+        country_code: country,
         company_registration: invoiceCompany ? ico : null,
         vat_id: vatId || null,
         company_name: invoiceCompany ? companyName : null,
@@ -293,6 +297,17 @@ export default function App() {
               {t(lang, 'invoiceCompany')}
             </label>
 
+            <label>
+              {t(lang, 'country')}
+              <select value={country} onChange={(e) => setCountry(e.target.value)} required>
+                {countriesForUi.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {countryDisplayName(c.code, lang, c.name_en)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             {!invoiceCompany && (
               <fieldset className="address-block">
                 <legend>{t(lang, 'address')}</legend>
@@ -331,16 +346,6 @@ export default function App() {
 
             {invoiceCompany && (
               <>
-                <label>
-                  {t(lang, 'country')}
-                  <select value={country} onChange={(e) => setCountry(e.target.value)} required>
-                    {countriesForUi.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {countryDisplayName(c.code, lang, c.name_en)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <div className="ico-row">
                   <label>
                     {t(lang, 'ico')}

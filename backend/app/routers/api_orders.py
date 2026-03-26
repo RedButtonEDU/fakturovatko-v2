@@ -33,12 +33,13 @@ def _validate_payload(body: OrderCreate) -> None:
             and (body.address_zip or "").strip()
         )
 
+    if not body.country_code:
+        raise HTTPException(422, "country_code is required")
+
     if not body.invoice_to_company:
         if not _addr_ok():
             raise HTTPException(422, "address_street, address_city, address_zip are required")
     else:
-        if not body.country_code:
-            raise HTTPException(422, "country_code is required for company invoice")
         if not (body.company_registration or "").strip():
             raise HTTPException(422, "company_registration (IČO) is required")
         if not (body.company_name or "").strip():
