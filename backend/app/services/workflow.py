@@ -160,12 +160,19 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             # Ti.to discount
             if not s.tito_api_key:
                 raise RuntimeError("TITO_API_KEY missing")
+            discount_code = tito_svc.build_discount_code_label(
+                invoice_to_company=order.invoice_to_company,
+                company_name=order.company_name,
+                full_name=order.full_name,
+                ticket_quantity=order.ticket_quantity,
+            )
             tito_res = await tito_svc.create_discount_code(
                 account=s.tito_account_slug,
                 event_slug=s.tito_event_slug,
                 api_key=s.tito_api_key,
                 release_id=order.tito_release_id,
                 quantity=order.ticket_quantity,
+                code=discount_code,
             )
             dc = (tito_res.get("discount_code") or {}) if isinstance(tito_res, dict) else {}
             order.tito_discount_code = dc.get("code")

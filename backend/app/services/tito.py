@@ -2,6 +2,7 @@
 
 import secrets
 import string
+import unicodedata
 from typing import Any, Optional
 
 import httpx
@@ -59,6 +60,53 @@ async def fetch_event(account: str, event_slug: str, api_key: str) -> dict[str, 
 def generate_discount_code(length: int = 12) -> str:
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _random_suffix(length: int = 5) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _strip_diacritics_to_ascii_alnum_upper(s: str) -> str:
+    """Remove diacritics; keep only A–Z and 0–9, uppercase."""
+    if not s:
+        return ""
+    nfd = unicodedata.normalize("NFD", s)
+    no_marks = "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+    return "".join(c.upper() for c in no_marks if c.isalnum())
+
+
+def _surname_from_full_name(full_name: str) -> str:
+    parts = full_name.strip().split()
+    if not parts:
+        return ""
+    return parts[-1]
+
+
+def build_discount_code_label(
+    *,
+    invoice_to_company: bool,
+    company_name: Optional[str],
+    full_name: str,
+    ticket_quantity: int,
+) -> str:
+    """
+    Faktura na firmu: FAKT-<název firmy ASCII, bez mezer, max 10 znaků>.
+    Jinak: <příjmení ASCII>-<počet vstupenek>-<5 náhodných znaků A–Z0–9>.
+    """
+    qty = max(1, min(50, int(ticket_quantity)))
+    if invoice_to_company:
+        raw = (company_name or "").strip()
+        slug = _strip_diacritics_to_ascii_alnum_upper(raw)[:10]
+        if not slug:
+            slug = _strip_diacritics_to_ascii_alnum_upper(_surname_from_full_name(full_name))[:10]
+        if not slug:
+            slug = "X"
+        return f"FAKT-{slug}"
+    sur = _strip_diacritics_to_ascii_alnum_upper(_surname_from_full_name(full_name))
+    if not sur:
+        sur = _strip_diacritics_to_ascii_alnum_upper(full_name)[:20] or "X"
+    return f"{sur}-{qty}-{_random_suffix(5)}"
 
 
 async def create_discount_code(
