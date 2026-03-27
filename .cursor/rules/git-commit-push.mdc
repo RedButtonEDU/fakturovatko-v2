@@ -9,3 +9,9 @@ alwaysApply: true
 - **Nečekej** na samostatné „commit a push“, pokud uživatel výslovně neřekl, že commitovat nechce (WIP, experiment) nebo že máš jen připravit diff.
 - Pokud **není co commitovat**, push není potřeba (nebo selže kvůli právům / konfliktu), stručně to napiš.
 - Jedna logická změna = jeden commit, případně rozumně rozdělené commity; žádné prázdné commity.
+
+## GitHub: účet pro push (tento projekt)
+
+- `origin` je **`https://github.com/RedButtonEDU/fakturovatko-v2.git`** — push musí proběhnout pod **účtem s oprávněním k orgu RedButtonEDU** (firemní / org přístup).
+- **Ne** pod osobním účtem **LC-RBEDU**, pokud k tomuto repu nemá práva — výsledek je typicky **`403 Permission denied`**.
+- Po 403: ověřit přihlášení (`gh auth status`, Keychain / Git Credential Manager), případně **SSH** s klíčem navázaným na správný GitHub účet, nebo PAT od účtu s přístupem k `RedButtonEDU/fakturovatko-v2`.
