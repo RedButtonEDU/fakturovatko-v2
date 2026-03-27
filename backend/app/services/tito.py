@@ -8,7 +8,6 @@ from typing import Any, Optional
 import httpx
 
 from app.config import get_settings
-from app.debug_ndjson import log as _dbg
 
 TITO_BASE = "https://api.tito.io/v3"
 
@@ -139,20 +138,6 @@ async def create_discount_code(
             "release_ids": [release_id],
         }
     }
-    # region agent log
-    _dbg(
-        hypothesis_id="H1",
-        location="tito.py:create_discount_code",
-        message="pre_post",
-        data={
-            "account": account,
-            "event_slug": event_slug,
-            "release_id": release_id,
-            "quantity": quantity,
-            "url_path": f"/v3/{account}/{event_slug}/discount_codes",
-        },
-    )
-    # endregion
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.post(
             url,
@@ -160,14 +145,6 @@ async def create_discount_code(
             params=params,
             json=body,
         )
-        # region agent log
-        _dbg(
-            hypothesis_id="H1",
-            location="tito.py:create_discount_code",
-            message="post_response",
-            data={"status_code": r.status_code, "ok": r.is_success},
-        )
-        # endregion
         if r.is_error:
             snippet = (r.text or "")[:2500]
             raise RuntimeError(f"Ti.to discount_codes {r.status_code}: {snippet}") from None

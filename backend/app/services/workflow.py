@@ -13,7 +13,6 @@ from app.services import email as email_svc
 from app.services import pipedrive as pd_svc
 from app.services import tito as tito_svc
 from app.services.pdf_mock import MOCK_PDF_BYTES
-from app.debug_ndjson import log as _dbg
 
 logger = logging.getLogger(__name__)
 
@@ -46,14 +45,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
         .filter(Order.status == OrderStatus.awaiting_payment.value)
         .all()
     )
-    # region agent log
-    _dbg(
-        hypothesis_id="H4",
-        location="workflow.py:process_paid_orders",
-        message="queue_loaded",
-        data={"awaiting_count": len(orders)},
-    )
-    # endregion
     if not orders:
         return {"checked": 0, "completed": 0, "errors": 0, "skipped": 0, "last_errors": []}
 
@@ -62,14 +53,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
         return bool(pid) and not str(pid).startswith("mock-")
 
     needs_allfred = any(_needs_allfred_fetch(o) for o in orders)
-    # region agent log
-    _dbg(
-        hypothesis_id="H4",
-        location="workflow.py:process_paid_orders",
-        message="allfred_fetch_needed",
-        data={"needs_allfred": needs_allfred},
-    )
-    # endregion
 
     proformas: list[dict[str, Any]] = []
     invoices: list[dict[str, Any]] = []
@@ -104,14 +87,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             if not pf_id or str(pf_id).startswith("mock-"):
                 if not s.allfred_mock_paid:
                     skipped += 1
-                    # region agent log
-                    _dbg(
-                        hypothesis_id="H4",
-                        location="workflow.py:process_paid_orders",
-                        message="skip_mock_no_mock_paid",
-                        data={"order_prefix": order.public_id[:8]},
-                    )
-                    # endregion
                     continue
                 paid = True
                 project_ids = {order.allfred_project_id or "mock"}
@@ -119,40 +94,12 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                 pf = pf_by_id.get(str(pf_id))
                 if not pf:
                     skipped += 1
-                    # region agent log
-                    _dbg(
-                        hypothesis_id="H4",
-                        location="workflow.py:process_paid_orders",
-                        message="skip_proforma_not_in_allfred",
-                        data={"order_prefix": order.public_id[:8]},
-                    )
-                    # endregion
                     continue
                 paid = _proforma_paid(pf)
                 if not paid:
                     skipped += 1
-                    # region agent log
-                    _dbg(
-                        hypothesis_id="H4",
-                        location="workflow.py:process_paid_orders",
-                        message="skip_proforma_unpaid",
-                        data={"order_prefix": order.public_id[:8]},
-                    )
-                    # endregion
                     continue
                 project_ids = set(allfred_svc.find_project_ids(pf))
-
-            # region agent log
-            _dbg(
-                hypothesis_id="H5",
-                location="workflow.py:process_paid_orders",
-                message="order_processing_start",
-                data={
-                    "order_prefix": order.public_id[:8],
-                    "mock_proforma": bool(not pf_id or str(pf_id).startswith("mock-")),
-                },
-            )
-            # endregion
 
             order.status = OrderStatus.paid_processing.value
             db.commit()
@@ -177,18 +124,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             dc = (tito_res.get("discount_code") or {}) if isinstance(tito_res, dict) else {}
             order.tito_discount_code = dc.get("code")
             order.tito_discount_code_id = dc.get("id")
-            # region agent log
-            _dbg(
-                hypothesis_id="H1",
-                location="workflow.py:process_paid_orders",
-                message="tito_discount_parsed",
-                data={
-                    "order_prefix": order.public_id[:8],
-                    "has_code": bool(dc.get("code")),
-                    "has_dc_id": dc.get("id") is not None,
-                },
-            )
-            # endregion
 
             # Final invoice: Allfred quick setup (new), or match existing outgoing invoice, or mock id
             final_invoice_id: Optional[str] = None
@@ -218,19 +153,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
 
             db.commit()
 
-            # region agent log
-            _dbg(
-                hypothesis_id="H2",
-                location="workflow.py:process_paid_orders",
-                message="before_email",
-                data={
-                    "order_prefix": order.public_id[:8],
-                    "gmail_configured": bool(s.gmail_refresh_token),
-                    "allfred_invoice": not str(final_invoice_id).startswith("mock-final-"),
-                },
-            )
-            # endregion
-
             # Email
             body = (
                 f"Dobrý den,\n\n"
@@ -246,27 +168,8 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                     attachment_bytes=pdf_bytes,
                     attachment_name=f"faktura-{order.public_id[:8]}.pdf",
                 )
-            # region agent log
-            _dbg(
-                hypothesis_id="H2",
-                location="workflow.py:process_paid_orders",
-                message="after_email",
-                data={"order_prefix": order.public_id[:8]},
-            )
-            # endregion
 
             # Pipedrive
-            # region agent log
-            _dbg(
-                hypothesis_id="H3",
-                location="workflow.py:process_paid_orders",
-                message="before_pipedrive",
-                data={
-                    "order_prefix": order.public_id[:8],
-                    "pipedrive_configured": bool(s.pipedrive_api_token),
-                },
-            )
-            # endregion
             if s.pipedrive_api_token:
                 pid, oid = await pd_svc.ensure_person_and_org(
                     email=order.email,
@@ -283,29 +186,9 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             order.status = OrderStatus.completed.value
             db.commit()
             processed += 1
-            # region agent log
-            _dbg(
-                hypothesis_id="H5",
-                location="workflow.py:process_paid_orders",
-                message="order_completed",
-                data={"order_prefix": order.public_id[:8]},
-            )
-            # endregion
         except Exception as e:
             logger.exception("Order %s failed: %s", order.public_id, e)
             msg = str(e)
-            # region agent log
-            _dbg(
-                hypothesis_id="H2",
-                location="workflow.py:process_paid_orders",
-                message="order_failed",
-                data={
-                    "order_prefix": order.public_id[:8],
-                    "exc_type": type(e).__name__,
-                    "msg_preview": msg[:300],
-                },
-            )
-            # endregion
             order.last_error = msg
             order.status = OrderStatus.error.value
             db.commit()

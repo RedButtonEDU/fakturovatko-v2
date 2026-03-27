@@ -263,21 +263,31 @@
   color: var(--gray-200);
 }
 
+/* Grid: řádek má výšku podle inputu; buňka tlačítka je stejně vysoká (u <button> selhává čistý flex stretch) */
 .ico-row-inner {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.75rem;
-  align-items: center;
+  align-items: stretch;
 }
 
 .ico-row-inner input {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   margin-top: 0; /* odstup řeší .ico-row-label, ne vnořený label */
 }
 
 .ico-row-inner .secondary {
-  flex-shrink: 0;
+  box-sizing: border-box;
+  justify-self: stretch;
+  align-self: stretch;
+  /* přebije .secondary { height: fit-content } — výška = buňka gridu (stejná jako input) */
+  height: 100%;
+  min-height: 0;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.65rem 1rem;
 }
 
