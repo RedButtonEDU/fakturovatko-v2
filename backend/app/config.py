@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Ti.to
     tito_api_key: Optional[str] = None
     tito_account_slug: str = "redbutton"
-    tito_event_slug: str = "els-2026"
+    tito_event_slug: str = "es-2026"
 
     # Allfred GraphQL
     allfred_api_key: Optional[str] = None

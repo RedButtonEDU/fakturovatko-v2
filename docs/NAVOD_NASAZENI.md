@@ -121,7 +121,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `CRON_SECRET` | ano | Náhodný dlouhý řetězec; **stejná** hodnota jako u scheduled tasku (viz [§8](#8-coolify--scheduled-task-cron)) |
 | `TITO_API_KEY` | ano | Token z [id.tito.io](https://id.tito.io) (režim **live**) |
 | `TITO_ACCOUNT_SLUG` | ano | `redbutton` |
-| `TITO_EVENT_SLUG` | ano | `els-2026` |
+| `TITO_EVENT_SLUG` | ano | `es-2026` |
 | `ALLFRED_API_KEY` | ano | Bearer token Workspace API |
 | `ALLFRED_WORKSPACE` | ano | např. `redbuttonedu` |
 | `GOOGLE_CLIENT_ID` | ano* | OAuth klient (Gmail) |
@@ -248,7 +248,7 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 
 2. Vložte do `TITO_API_KEY`.
 
-3. Účet a event odpovídají `TITO_ACCOUNT_SLUG=redbutton`, `TITO_EVENT_SLUG=els-2026`.
+3. Účet a event odpovídají `TITO_ACCOUNT_SLUG=redbutton`, `TITO_EVENT_SLUG=es-2026`.
 
 ---
 
