@@ -264,7 +264,7 @@ Normální objednávka z formuláře vytvoří v Allfredu **skutečnou proformu*
 
 1. Nastavte **`ALLFRED_MOCK_PAID=true`** (v Coolify nebo lokálně). V produkci nechte **`false`**, jinak by se „zaplacené“ chovaly i tyto mock záznamy.
 
-2. Pokud jsou ve frontě **jen** objednávky s mock proformou, aplikace **nevolá** Allfred GraphQL — stačí mít prázdný `ALLFRED_API_KEY` pro čistou simulaci druhé fáze. Pro reálný běh včetně vytváření proformy při objednávce musí být nastavený `ALLFRED_API_KEY` a quick setup proměnné, viz `env.example`.
+2. Pokud jsou ve frontě **jen** objednávky s mock proformou, aplikace **nevolá** Allfred GraphQL — stačí mít prázdný `ALLFRED_API_KEY` pro čistou simulaci druhé fáze. Pro reálný běh včetně vytváření proformy při objednávce stačí v Coolify **`ALLFRED_API_KEY`** a **`ALLFRED_WORKSPACE`**; ID firmy / týmu / PM a error e-mail mají **výchozí hodnoty v kódu** (jako projekt Allfred invoices – Equilibrium), případně je přepište env proměnnými.
 
 3. Spusťte job stejně jako cron:  
    `curl -fsS -X POST -H "X-Cron-Token: $CRON_SECRET" http://localhost:8000/internal/jobs/poll-payments`  
