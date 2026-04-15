@@ -126,7 +126,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `ALLFRED_WORKSPACE` | ano | např. `redbuttonedu` |
 | `GOOGLE_CLIENT_ID` | ano* | OAuth klient (Gmail) |
 | `GOOGLE_CLIENT_SECRET` | ano* | OAuth secret |
-| `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro účet **hello@redbuttonedu.cz** |
+| `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro Google účet s oprávněním odesílat jako **`GMAIL_FROM_EMAIL`** (výchozí Dominik / dominik@…) |
 | `PIPEDRIVE_API_TOKEN` | ano | API token (uživatel s právy zápisu) |
 | `OPENDATA_FS` | ne | API klíč z [OpenData FS](https://opendata.financnasprava.sk/en/page/openapi) — doplnění **IČ DPH** (DIČ) při načtení slovenského IČO z RPO; bez klíče zůstane pole DIČ prázdné |
 | `ALLFRED_MOCK_PAID` | ne | Produkce: `false`. `true` = simulace zaplacení u mock proformy — viz [§11](#11-alfred) |

@@ -5,6 +5,7 @@ import logging
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from typing import Optional
 
 from google.auth.transport.requests import Request
@@ -51,11 +52,13 @@ def send_email(
     creds.refresh(Request())
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
+    from_hdr = formataddr((s.gmail_from_name, s.gmail_from_email))
+
     if attachment_bytes and attachment_name:
         message = MIMEMultipart()
         message["to"] = to
         message["subject"] = subject
-        message["from"] = "hello@redbuttonedu.cz"
+        message["from"] = from_hdr
         if body_html:
             alt = MIMEMultipart("alternative")
             alt.attach(MIMEText(body_text, "plain", "utf-8"))
@@ -70,14 +73,14 @@ def send_email(
         message = MIMEMultipart("alternative")
         message["to"] = to
         message["subject"] = subject
-        message["from"] = "hello@redbuttonedu.cz"
+        message["from"] = from_hdr
         message.attach(MIMEText(body_text, "plain", "utf-8"))
         message.attach(MIMEText(body_html, "html", "utf-8"))
     else:
         message = MIMEText(body_text, "plain", "utf-8")
         message["to"] = to
         message["subject"] = subject
-        message["from"] = "hello@redbuttonedu.cz"
+        message["from"] = from_hdr
 
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     service.users().messages().send(userId="me", body={"raw": raw}).execute()

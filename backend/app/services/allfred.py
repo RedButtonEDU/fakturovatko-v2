@@ -203,12 +203,16 @@ def build_quick_setup_input(
         issue_date = due_date = date_of_supply = today
         inv_paid = True if paid is None else paid
         inv_type = "INVOICE"
-    fn, ln = _split_contact_name(order.full_name)
+    # Kontaktní osoba na dokladu = firemní kontakt (GMAIL_FROM_*), ne jméno zákazníka z formuláře
+    c_fn, c_ln = _split_contact_name(s.gmail_from_name)
+    c_email = (s.gmail_from_email or "").strip()
+    if not c_email:
+        raise ValueError("gmail_from_email is required for Allfred client_data contact_email")
+
     street = (order.address_street or "").strip()
     city = (order.address_city or "").strip()
     zipc = (order.address_zip or "").strip()
     cc = (order.country_code or "CZ").upper()
-    email = order.email.strip()
 
     if order.invoice_to_company:
         cn = (order.company_name or "").strip() or order.full_name.strip()
@@ -220,9 +224,9 @@ def build_quick_setup_input(
             "zip": zipc,
             "country_iso": cc,
             "language": "cz",
-            "contact_first_name": fn,
-            "contact_last_name": ln,
-            "contact_email": email,
+            "contact_first_name": c_fn,
+            "contact_last_name": c_ln,
+            "contact_email": c_email,
         }
         reg = (order.company_registration or "").strip()
         if reg:
@@ -240,9 +244,9 @@ def build_quick_setup_input(
             "zip": zipc,
             "country_iso": cc,
             "language": "cz",
-            "contact_first_name": fn,
-            "contact_last_name": ln,
-            "contact_email": email,
+            "contact_first_name": c_fn,
+            "contact_last_name": c_ln,
+            "contact_email": c_email,
         }
 
     uh = unit_price_hellers(order)

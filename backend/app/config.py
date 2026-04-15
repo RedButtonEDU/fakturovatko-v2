@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
     gmail_refresh_token: Optional[str] = None
+    # Odesílatel systémových e-mailů + kontaktní osoba na Allfred dokladu (client_data.contact_*)
+    gmail_from_name: str = "Dominik Holíček"
+    gmail_from_email: str = "dominik@redbuttonedu.cz"
 
     # Pipedrive
     pipedrive_api_token: Optional[str] = None
