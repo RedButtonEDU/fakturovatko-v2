@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     allfred_vat_reverse_charge: Optional[bool] = None
     # PROFORMA: due_date = issue_date + N days (QuickSetupInvoiceInput)
     allfred_proforma_due_days: int = 14
+    # Minimální datum vystavení v Allfredu (businessLogic); issue/due/supply = max(today, floor)
+    allfred_issue_date_not_before: str = "2026-04-16"
     # Web UI login (optional) — PDF download URLs vrací SPA/HTML bez session; Equilibrium/n8n používá cookie po POST /login
     allfred_ui_email: Optional[str] = None
     allfred_ui_password: Optional[str] = None

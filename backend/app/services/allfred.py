@@ -168,6 +168,17 @@ def unit_price_hellers(order: Order) -> int:
     return int(round(float(czk) * 100))
 
 
+def _quick_setup_anchor_date() -> date:
+    """Datum vystavení: dnes, ale ne dřív než Allfred minimum (workspace business rules)."""
+    s = get_settings()
+    today = date.today()
+    try:
+        floor = date.fromisoformat(s.allfred_issue_date_not_before.strip())
+    except ValueError:
+        floor = today
+    return max(today, floor)
+
+
 def build_quick_setup_input(
     order: Order,
     *,
@@ -179,10 +190,10 @@ def build_quick_setup_input(
     PROFORMA = zálohová proforma (objednávka); INVOICE = finální faktura po zaplacení (cron).
     """
     s = get_settings()
-    today_d = date.today()
-    today = today_d.isoformat()
+    anchor = _quick_setup_anchor_date()
+    today = anchor.isoformat()
     if document_type == "PROFORMA":
-        due = (today_d + timedelta(days=s.allfred_proforma_due_days)).isoformat()
+        due = (anchor + timedelta(days=s.allfred_proforma_due_days)).isoformat()
         issue_date = today
         due_date = due
         date_of_supply = today
