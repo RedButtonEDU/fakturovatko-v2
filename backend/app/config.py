@@ -32,11 +32,12 @@ class Settings(BaseSettings):
     allfred_workspace: str = "redbuttonedu"
     # Dev: treat mock proformas as paid in cron job
     allfred_mock_paid: bool = False
-    # quickSetupClientProjectInvoice — výchozí ID jako v projektu „Allfred invoices - Equilibrium“ (n8n Build Allfred Payload).
-    # Lze přepsat proměnnými prostředí (Coolify).
+    # quickSetupClientProjectInvoice — výchozí ID v Allfred workspace (lze přepsat env, viz Coolify).
     allfred_workspace_company_id: str = "1"
-    allfred_team_id: str = "8"
-    allfred_project_manager_id: str = "12"
+    # Tým „Eventy & Komunity“
+    allfred_team_id: str = "12"
+    # Uživatel Michal Šrajer
+    allfred_project_manager_id: str = "27"
     allfred_quick_setup_error_email: str = "lukas@redbuttonedu.cz"
     # VAT rate as Allfred BigInt (e.g. 2100 = 21 %)
     allfred_invoice_vat_rate: int = 2100
