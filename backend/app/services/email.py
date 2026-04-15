@@ -2,6 +2,7 @@
 
 import base64
 import logging
+import os
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -13,6 +14,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from app.config import get_settings
+from app.debug_ndjson import agent_log
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,19 @@ def send_email(
     attachment_content_type: str = "application/pdf",
 ) -> None:
     s = get_settings()
+    # region agent log
+    agent_log(
+        "H1",
+        "email.py:send_email:entry",
+        "resolved_settings_and_env_flags",
+        {
+            "gmail_from_email": s.gmail_from_email,
+            "gmail_from_name": s.gmail_from_name,
+            "env_GMAIL_FROM_EMAIL_defined": "GMAIL_FROM_EMAIL" in os.environ,
+            "env_GMAIL_FROM_NAME_defined": "GMAIL_FROM_NAME" in os.environ,
+        },
+    )
+    # endregion
     if not s.gmail_refresh_token:
         raise RuntimeError("GMAIL_REFRESH_TOKEN is not set")
     if not s.google_client_id or not s.google_client_secret:
@@ -85,6 +100,32 @@ def send_email(
         message["subject"] = subject
         message["from"] = from_hdr
 
+    # region agent log
+    _from_combined = f"{from_hdr} {(message.get('From') or message.get('from') or '')}"
+    agent_log(
+        "H2",
+        "email.py:send_email:before_send",
+        "mime_from_built",
+        {
+            "from_hdr": from_hdr,
+            "message_get_From": message.get("From") or message.get("from"),
+            "contains_hello_at": "hello@" in _from_combined.lower(),
+        },
+    )
+    # endregion
+
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
-    service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    # region agent log
+    send_result = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    agent_log(
+        "H3",
+        "email.py:send_email:after_gmail_api",
+        "gmail_messages_send_response",
+        {
+            "message_id": send_result.get("id"),
+            "thread_id": send_result.get("threadId"),
+            "label_ids": send_result.get("labelIds"),
+        },
+    )
+    # endregion
     logger.info("Email sent to %s", to)
