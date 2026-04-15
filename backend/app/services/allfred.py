@@ -37,13 +37,21 @@ query OutgoingInvoices($page: Int!) {
 }
 """
 
+# quickSetupClientProjectInvoice → QuickSetupResult (introspection 2026-04):
+# optional outgoingInvoice vs outgoingProformaInvoice depending on QuickSetupInvoiceInput.type (INVOICE | PROFORMA).
 QUICK_SETUP_MUTATION = """
 mutation QuickSetup($input: QuickSetupInput!) {
   quickSetupClientProjectInvoice(input: $input) {
+    client { id name }
+    project { id title code }
     outgoingInvoice {
       id
       invoice_no
       invoicePdf { download preview }
+    }
+    outgoingProformaInvoice {
+      id
+      invoice_no
     }
   }
 }
@@ -135,7 +143,7 @@ def mock_create_proforma_invoice(order_public_id: str) -> dict[str, str]:
 
 
 def quick_setup_ready() -> bool:
-    """Allfred quickSetupClientProjectInvoice requires these settings (see Equilibrium allfred_api.md)."""
+    """True when env has API key + IDs required by quickSetupClientProjectInvoice (QuickSetupInput)."""
     s = get_settings()
     return bool(
         s.allfred_api_key
@@ -181,7 +189,7 @@ def build_quick_setup_input(order: Order) -> dict[str, Any]:
             "city": city,
             "zip": zipc,
             "country_iso": cc,
-            "language": "cs",
+            "language": "cz",
             "contact_first_name": fn,
             "contact_last_name": ln,
             "contact_email": email,
@@ -201,7 +209,7 @@ def build_quick_setup_input(order: Order) -> dict[str, Any]:
             "city": city,
             "zip": zipc,
             "country_iso": cc,
-            "language": "cs",
+            "language": "cz",
             "contact_first_name": fn,
             "contact_last_name": ln,
             "contact_email": email,
@@ -210,6 +218,33 @@ def build_quick_setup_input(order: Order) -> dict[str, Any]:
     uh = unit_price_hellers(order)
     if uh <= 0:
         raise ValueError("unit price must be positive for Allfred invoice")
+
+    # QuickSetupInvoiceTypeEnum: INVOICE | PROFORMA (cron flow needs final invoice + PDF on OutgoingInvoice)
+    invoice_payload: dict[str, Any] = {
+        "type": "INVOICE",
+        "issue_date": today,
+        "due_date": today,
+        "date_of_supply": today,
+        "workspace_company_id": s.allfred_workspace_company_id,
+        "currency_iso": "CZK",
+        "send_oi": False,
+        "paid": True,
+        "vat_rate": s.allfred_invoice_vat_rate,
+        "invoice_items": [
+            {
+                "description": f"{order.tito_release_title} — Exponential Summit 2026",
+                "unit_price": uh,
+                "quantity": float(order.ticket_quantity),
+            }
+        ],
+        "note": f"Objednávka Exponential Summit {order.public_id}",
+    }
+    if s.allfred_workspace_bank_account_id:
+        invoice_payload["workspace_bank_account_id"] = s.allfred_workspace_bank_account_id
+    if s.allfred_invoice_sequence_id:
+        invoice_payload["invoice_sequence_id"] = s.allfred_invoice_sequence_id
+    if s.allfred_vat_reverse_charge is not None:
+        invoice_payload["vat_reverse_charge"] = s.allfred_vat_reverse_charge
 
     inp: dict[str, Any] = {
         "client_data": client_data,
@@ -220,24 +255,7 @@ def build_quick_setup_input(order: Order) -> dict[str, Any]:
             "team_id": s.allfred_team_id,
             "start_date": today,
         },
-        "invoice": {
-            "issue_date": today,
-            "due_date": today,
-            "date_of_supply": today,
-            "workspace_company_id": s.allfred_workspace_company_id,
-            "currency_iso": "CZK",
-            "send_oi": False,
-            "paid": True,
-            "vat_rate": s.allfred_invoice_vat_rate,
-            "invoice_items": [
-                {
-                    "description": f"{order.tito_release_title} — Exponential Summit 2026",
-                    "unit_price": uh,
-                    "quantity": float(order.ticket_quantity),
-                }
-            ],
-            "note": f"Objednávka Exponential Summit {order.public_id}",
-        },
+        "invoice": invoice_payload,
         "error_email": s.allfred_quick_setup_error_email,
     }
     return inp

@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     allfred_quick_setup_error_email: Optional[str] = None
     # VAT rate as Allfred BigInt (e.g. 2100 = 21 %)
     allfred_invoice_vat_rate: int = 2100
+    # QuickSetupInvoiceInput (optional; workspace default bank account if unset)
+    allfred_workspace_bank_account_id: Optional[str] = None
+    allfred_invoice_sequence_id: Optional[str] = None
+    # QuickSetupInvoiceInput.vat_reverse_charge (EU reverse charge); unset = omit from mutation
+    allfred_vat_reverse_charge: Optional[bool] = None
     # Jednotková cena v Kč, pokud objednávka nemá ticket_unit_price_czk (starší řádky)
     allfred_fallback_unit_price_czk: float = 1000.0
 
