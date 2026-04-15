@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     allfred_invoice_sequence_id: Optional[str] = None
     # QuickSetupInvoiceInput.vat_reverse_charge (EU reverse charge); unset = omit from mutation
     allfred_vat_reverse_charge: Optional[bool] = None
+    # PROFORMA: due_date = issue_date + N days (QuickSetupInvoiceInput)
+    allfred_proforma_due_days: int = 14
     # Jednotková cena v Kč, pokud objednávka nemá ticket_unit_price_czk (starší řádky)
     allfred_fallback_unit_price_czk: float = 1000.0
 

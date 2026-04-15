@@ -1,5 +1,6 @@
-"""Create orders (proforma mock + email)."""
+"""Create orders (Allfred PROFORMA + email)."""
 
+import logging
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -11,9 +12,10 @@ from app.config import get_settings
 from app.db import get_db
 from app.models import Order, OrderStatus
 from app.schemas import OrderCreate, OrderOut
+from app.services import allfred as allfred_svc
 from app.services import email as email_svc
-from app.services.allfred import mock_create_proforma_invoice
-from app.services.pdf_mock import MOCK_PDF_BYTES
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["orders"])
 
@@ -49,12 +51,56 @@ def _validate_payload(body: OrderCreate) -> None:
 
 
 @router.post("/orders", response_model=OrderOut)
-def create_order(body: OrderCreate, db: Session = Depends(get_db)):
+async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     _validate_payload(body)
     s = get_settings()
+    if not allfred_svc.quick_setup_ready():
+        raise HTTPException(
+            503,
+            "Allfred quick setup is not configured. Set ALLFRED_API_KEY, ALLFRED_WORKSPACE_COMPANY_ID, "
+            "ALLFRED_TEAM_ID, ALLFRED_PROJECT_MANAGER_ID, and ALLFRED_QUICK_SETUP_ERROR_EMAIL.",
+        )
+
     public_id = str(uuid.uuid4())
 
-    mock = mock_create_proforma_invoice(public_id)
+    order_for_api = Order(
+        public_id=public_id,
+        full_name=body.full_name.strip(),
+        email=body.email.lower().strip(),
+        ticket_quantity=body.ticket_quantity,
+        tito_release_id=body.tito_release_id,
+        tito_release_slug=body.tito_release_slug.strip(),
+        tito_release_title=body.tito_release_title.strip(),
+        ticket_unit_price_czk=body.ticket_unit_price_czk,
+        invoice_to_company=body.invoice_to_company,
+        address_street=_trim(body.address_street),
+        address_city=_trim(body.address_city),
+        address_zip=_trim(body.address_zip),
+        country_code=(body.country_code or "").upper() or None,
+        company_registration=body.company_registration,
+        vat_id=body.vat_id,
+        company_name=body.company_name,
+        status=OrderStatus.awaiting_payment.value,
+        updated_at=datetime.utcnow(),
+    )
+
+    try:
+        block = await allfred_svc.quick_setup_proforma_invoice(order_for_api)
+    except Exception as e:
+        logger.exception("Allfred quickSetup PROFORMA failed: %s", e)
+        raise HTTPException(502, f"Allfred: nelze vytvořit zálohovou fakturu: {e!s}") from e
+
+    proforma_id = str(block["outgoingProformaInvoice"]["id"])
+    project_id = str(block["project"]["id"])
+
+    try:
+        pdf_bytes = await allfred_svc.download_proforma_pdf_bytes(proforma_id)
+    except Exception as e:
+        logger.exception("Proforma PDF download failed (id=%s): %s", proforma_id, e)
+        raise HTTPException(
+            502,
+            f"Proforma v Allfredu vznikla (id {proforma_id}), ale PDF se nepodařilo stáhnout: {e!s}",
+        ) from e
 
     order = Order(
         public_id=public_id,
@@ -74,9 +120,9 @@ def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         vat_id=body.vat_id,
         company_name=body.company_name,
         status=OrderStatus.awaiting_payment.value,
-        allfred_proforma_id=mock["id"],
-        allfred_project_id=mock["project_id"],
-        mock_proforma_note="Mock PDF until Allfred create API is available",
+        allfred_proforma_id=proforma_id,
+        allfred_project_id=project_id,
+        mock_proforma_note=None,
         updated_at=datetime.utcnow(),
     )
     db.add(order)
@@ -86,7 +132,7 @@ def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     subject = "Exponential Summit – zálohová faktura (proforma)"
     text = (
         f"Dobrý den,\n\n"
-        f"děkujeme za objednávku. V příloze je zálohová faktura (náhled).\n"
+        f"děkujeme za objednávku. V příloze je zálohová faktura z Allfredu.\n"
         f"Číslo objednávky: {public_id}\n\n"
         f"Tým Exponential Summit"
     )
@@ -96,7 +142,7 @@ def create_order(body: OrderCreate, db: Session = Depends(get_db)):
                 order.email,
                 subject,
                 text,
-                attachment_bytes=MOCK_PDF_BYTES,
+                attachment_bytes=pdf_bytes,
                 attachment_name=f"proforma-{public_id[:8]}.pdf",
             )
     except Exception as e:
@@ -104,4 +150,8 @@ def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         db.commit()
         raise HTTPException(503, f"Could not send email: {e}") from e
 
-    return OrderOut(public_id=public_id, status=order.status, message="Proforma odeslána e-mailem.")
+    msg = "Proforma vytvořena v Allfredu a odeslána e-mailem."
+    if not s.gmail_refresh_token:
+        msg = "Proforma vytvořena v Allfredu (GMAIL_REFRESH_TOKEN není nastaven — e-mail neodeslán)."
+
+    return OrderOut(public_id=public_id, status=order.status, message=msg)

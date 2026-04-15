@@ -1,8 +1,8 @@
 """Allfred Workspace GraphQL API."""
 
 import logging
-from datetime import date
-from typing import Any, Optional
+from datetime import date, timedelta
+from typing import Any, Literal, Optional
 
 import httpx
 
@@ -134,14 +134,6 @@ def find_project_ids(proforma: dict) -> list[str]:
     return [str(p.get("id")) for p in projects if isinstance(p, dict) and p.get("id")]
 
 
-def mock_create_proforma_invoice(order_public_id: str) -> dict[str, str]:
-    """Placeholder until Allfred exposes create mutation."""
-    return {
-        "id": f"mock-proforma-{order_public_id[:8]}",
-        "project_id": f"mock-project-{order_public_id[:8]}",
-    }
-
-
 def quick_setup_ready() -> bool:
     """True when env has API key + IDs required by quickSetupClientProjectInvoice (QuickSetupInput)."""
     s = get_settings()
@@ -169,10 +161,30 @@ def unit_price_hellers(order: Order) -> int:
     return int(round(float(czk) * 100))
 
 
-def build_quick_setup_input(order: Order) -> dict[str, Any]:
-    """Build QuickSetupInput for GraphQL (amounts in haléřích)."""
+def build_quick_setup_input(
+    order: Order,
+    *,
+    document_type: Literal["INVOICE", "PROFORMA"] = "INVOICE",
+    paid: Optional[bool] = None,
+) -> dict[str, Any]:
+    """Build QuickSetupInput for GraphQL (amounts in haléřích).
+
+    PROFORMA = zálohová proforma (objednávka); INVOICE = finální faktura po zaplacení (cron).
+    """
     s = get_settings()
-    today = date.today().isoformat()
+    today_d = date.today()
+    today = today_d.isoformat()
+    if document_type == "PROFORMA":
+        due = (today_d + timedelta(days=s.allfred_proforma_due_days)).isoformat()
+        issue_date = today
+        due_date = due
+        date_of_supply = today
+        inv_paid = False if paid is None else paid
+        inv_type = "PROFORMA"
+    else:
+        issue_date = due_date = date_of_supply = today
+        inv_paid = True if paid is None else paid
+        inv_type = "INVOICE"
     fn, ln = _split_contact_name(order.full_name)
     street = (order.address_street or "").strip()
     city = (order.address_city or "").strip()
@@ -219,16 +231,15 @@ def build_quick_setup_input(order: Order) -> dict[str, Any]:
     if uh <= 0:
         raise ValueError("unit price must be positive for Allfred invoice")
 
-    # QuickSetupInvoiceTypeEnum: INVOICE | PROFORMA (cron flow needs final invoice + PDF on OutgoingInvoice)
     invoice_payload: dict[str, Any] = {
-        "type": "INVOICE",
-        "issue_date": today,
-        "due_date": today,
-        "date_of_supply": today,
+        "type": inv_type,
+        "issue_date": issue_date,
+        "due_date": due_date,
+        "date_of_supply": date_of_supply,
         "workspace_company_id": s.allfred_workspace_company_id,
         "currency_iso": "CZK",
         "send_oi": False,
-        "paid": True,
+        "paid": inv_paid,
         "vat_rate": s.allfred_invoice_vat_rate,
         "invoice_items": [
             {
@@ -261,15 +272,38 @@ def build_quick_setup_input(order: Order) -> dict[str, Any]:
     return inp
 
 
+async def quick_setup_proforma_invoice(order: Order) -> dict[str, Any]:
+    """Create client + project + outgoing PROFORMA via Allfred quick setup (order form)."""
+    variables = {"input": build_quick_setup_input(order, document_type="PROFORMA")}
+    data = await _graphql(QUICK_SETUP_MUTATION, variables)
+    block = data.get("quickSetupClientProjectInvoice") or {}
+    op = block.get("outgoingProformaInvoice")
+    if not op or not op.get("id"):
+        raise RuntimeError(f"quickSetupClientProjectInvoice (PROFORMA) unexpected response: {data}")
+    return block
+
+
 async def quick_setup_client_project_invoice(order: Order) -> dict[str, Any]:
-    """Create client + project + outgoing invoice via Allfred quick setup."""
-    variables = {"input": build_quick_setup_input(order)}
+    """Create client + project + final OutgoingInvoice (INVOICE) — po zaplacení zálohy."""
+    variables = {"input": build_quick_setup_input(order, document_type="INVOICE")}
     data = await _graphql(QUICK_SETUP_MUTATION, variables)
     block = data.get("quickSetupClientProjectInvoice") or {}
     oi = block.get("outgoingInvoice")
     if not oi or not oi.get("id"):
-        raise RuntimeError(f"quickSetupClientProjectInvoice unexpected response: {data}")
+        raise RuntimeError(f"quickSetupClientProjectInvoice (INVOICE) unexpected response: {data}")
     return block
+
+
+def outgoing_proforma_pdf_download_url(proforma_id: str) -> str:
+    """REST URL stejný vzor jako outgoingInvoice.invoicePdf.download (GraphQL nemá invoicePdf u proformy)."""
+    s = get_settings()
+    return f"https://{s.allfred_workspace}-api.allfred.io/outgoing-proforma-invoice/{proforma_id}/download"
+
+
+def _ensure_pdf_magic(data: bytes, context: str) -> None:
+    if not data.startswith(b"%PDF"):
+        head = data[:120].decode("utf-8", errors="replace")
+        raise RuntimeError(f"{context}: očekáváno PDF, server vrátil: {head!r}")
 
 
 async def fetch_outgoing_invoice_download_url(invoice_id: str) -> Optional[str]:
@@ -282,15 +316,27 @@ async def fetch_outgoing_invoice_download_url(invoice_id: str) -> Optional[str]:
 async def download_pdf_from_url(url: str) -> bytes:
     """Download PDF; retry with Bearer if URL requires workspace auth."""
     s = get_settings()
+    accept = {"Accept": "application/pdf,*/*;q=0.1"}
+    headers = dict(accept)
+    if s.allfred_api_key and "allfred.io" in url:
+        headers["Authorization"] = f"Bearer {s.allfred_api_key}"
     async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-        r = await client.get(url)
+        r = await client.get(url, headers=headers)
         if r.status_code == 401 and s.allfred_api_key:
             r = await client.get(
                 url,
-                headers={"Authorization": f"Bearer {s.allfred_api_key}"},
+                headers={**accept, "Authorization": f"Bearer {s.allfred_api_key}"},
             )
         r.raise_for_status()
         return r.content
+
+
+async def download_proforma_pdf_bytes(proforma_id: str) -> bytes:
+    """Stažení PDF proformy (OutgoingProformaInvoice nemá invoicePdf ve schématu — použij REST download)."""
+    url = outgoing_proforma_pdf_download_url(proforma_id)
+    data = await download_pdf_from_url(url)
+    _ensure_pdf_magic(data, "Allfred proforma PDF")
+    return data
 
 
 async def resolve_outgoing_invoice_pdf_bytes(outgoing_invoice: dict[str, Any]) -> Optional[bytes]:

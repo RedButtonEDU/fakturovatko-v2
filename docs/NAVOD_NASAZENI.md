@@ -258,13 +258,13 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 
 2. Nastavte `ALLFRED_API_KEY` a `ALLFRED_WORKSPACE` (subdoména před `-api.allfred.io`).
 
-### Simulace druhé fáze (zaplacená proforma bez skutečné proformy v Allfredovi)
+### Simulace druhé fáze (zaplacená proforma bez reálné proformy v Allfredovi)
 
-Objednávky z formuláře mají v DB jen **mock** odkazy (`mock-proforma-…` / `mock-project-…`) — reálná proforma v Allfredovi nevzniká.
+Normální objednávka z formuláře vytvoří v Allfredu **skutečnou proformu** a uloží její ID. Simulace se týká jen **starých testovacích řádků** v DB s ID `mock-proforma-…` / `mock-project-…` (bez odpovídající proformy v Allfredu).
 
-1. Nastavte **`ALLFRED_MOCK_PAID=true`** (v Coolify nebo lokálně). V produkci nechte **`false`**, jinak by se „zaplacené“ chovaly i mock objednávky.
+1. Nastavte **`ALLFRED_MOCK_PAID=true`** (v Coolify nebo lokálně). V produkci nechte **`false`**, jinak by se „zaplacené“ chovaly i tyto mock záznamy.
 
-2. Pokud jsou ve frontě **jen** objednávky s mock proformou, aplikace **nevolá** Allfred GraphQL — stačí mít prázdný `ALLFRED_API_KEY` pro čistou simulaci. Jakmile budete mít v Allfredovi skutečné proformy, nastavte klíč a `ALLFRED_MOCK_PAID=false`.
+2. Pokud jsou ve frontě **jen** objednávky s mock proformou, aplikace **nevolá** Allfred GraphQL — stačí mít prázdný `ALLFRED_API_KEY` pro čistou simulaci druhé fáze. Pro reálný běh včetně vytváření proformy při objednávce musí být nastavený `ALLFRED_API_KEY` a quick setup proměnné, viz `env.example`.
 
 3. Spusťte job stejně jako cron:  
    `curl -fsS -X POST -H "X-Cron-Token: $CRON_SECRET" http://localhost:8000/internal/jobs/poll-payments`  

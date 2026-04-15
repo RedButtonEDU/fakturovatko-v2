@@ -55,5 +55,5 @@ docker run --rm -p 8000:8000 -e TITO_API_KEY=... fakturovatko
 
 ## Poznámky
 
-- Vytvoření proforma faktury v Allfred API zatím není — používá se **mock PDF**; pole a služby jsou připravené na napojení.
-- Cron job `POST /internal/jobs/poll-payments` zpracuje zaplacené proformy; u mock objednávek lze v dev nastavit `ALLFRED_MOCK_PAID=true`.
+- Po odeslání formuláře vznikne v Allfredu **zálohová proforma** (`quickSetupClientProjectInvoice` s `type: PROFORMA`), PDF se stáhne a odešle v e-mailu (vyžaduje nakonfigurovaný Allfred quick setup + volitelně Gmail).
+- Cron job `POST /internal/jobs/poll-payments` zpracuje zaplacené proformy; u starých testovacích řádků s `mock-proforma-…` v DB lze v dev nastavit `ALLFRED_MOCK_PAID=true`.
