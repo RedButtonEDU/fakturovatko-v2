@@ -28,7 +28,7 @@ def _credentials(refresh_token: str) -> Credentials:
         token_uri=TOKEN_URI,
         client_id=s.google_client_id,
         client_secret=s.google_client_secret,
-        scopes=None,
+        scopes=[GMAIL_SCOPE],
     )
 
 
@@ -52,7 +52,10 @@ def send_email(
     creds.refresh(Request())
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
+    # MIME From = GMAIL_FROM_* (viz config). OAuth účet u GMAIL_REFRESH_TOKEN může v klientovi
+    # přebít zobrazení, pokud adresa v From není v Gmailu „Odesílat jako“ pro daný účet.
     from_hdr = formataddr((s.gmail_from_name, s.gmail_from_email))
+    logger.info("Gmail send: MIME From header %s", from_hdr)
 
     if attachment_bytes and attachment_name:
         message = MIMEMultipart()

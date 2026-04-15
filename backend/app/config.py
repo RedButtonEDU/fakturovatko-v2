@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -63,6 +64,30 @@ class Settings(BaseSettings):
     # Odesílatel systémových e-mailů + kontaktní osoba na Allfred dokladu (client_data.contact_*)
     gmail_from_name: str = "Dominik Holíček"
     gmail_from_email: str = "dominik@redbuttonedu.cz"
+
+    @field_validator("gmail_from_email", mode="before")
+    @classmethod
+    def _gmail_from_email_nonempty(cls, v: object) -> str:
+        default = "dominik@redbuttonedu.cz"
+        if v is None:
+            return default
+        if isinstance(v, str):
+            s = v.strip()
+            if not s or "@" not in s:
+                return default
+            return s
+        return default
+
+    @field_validator("gmail_from_name", mode="before")
+    @classmethod
+    def _gmail_from_name_nonempty(cls, v: object) -> str:
+        default = "Dominik Holíček"
+        if v is None:
+            return default
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else default
+        return default
 
     # Pipedrive
     pipedrive_api_token: Optional[str] = None
