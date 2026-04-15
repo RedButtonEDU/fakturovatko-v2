@@ -60,6 +60,12 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
             "Allfred quick setup is not configured. Set ALLFRED_API_KEY, ALLFRED_WORKSPACE_COMPANY_ID, "
             "ALLFRED_TEAM_ID, ALLFRED_PROJECT_MANAGER_ID, and ALLFRED_QUICK_SETUP_ERROR_EMAIL.",
         )
+    if not allfred_svc.allfred_ui_pdf_ready():
+        raise HTTPException(
+            503,
+            "PDF příloha e-mailu: nastavte ALLFRED_UI_EMAIL a ALLFRED_UI_PASSWORD (webové přihlášení do Allfredu, "
+            "stejně jako v projektu „Allfred invoices – Equilibrium“ / n8n). Samotný ALLFRED_API_KEY na stažení PDF nestačí.",
+        )
 
     public_id = str(uuid.uuid4())
 

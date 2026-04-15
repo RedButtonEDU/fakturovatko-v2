@@ -1,6 +1,7 @@
 """Allfred Workspace GraphQL API."""
 
 import logging
+import re
 from datetime import date, timedelta
 from typing import Any, Literal, Optional
 
@@ -144,6 +145,12 @@ def quick_setup_ready() -> bool:
         and s.allfred_project_manager_id
         and s.allfred_quick_setup_error_email
     )
+
+
+def allfred_ui_pdf_ready() -> bool:
+    """True when Allfred web credentials are set (session cookie PDF download — viz Equilibrium n8n)."""
+    s = get_settings()
+    return bool((s.allfred_ui_email or "").strip() and (s.allfred_ui_password or "").strip())
 
 
 def _split_contact_name(full_name: str) -> tuple[str, str]:
@@ -295,9 +302,50 @@ async def quick_setup_client_project_invoice(order: Order) -> dict[str, Any]:
 
 
 def outgoing_proforma_pdf_download_url(proforma_id: str) -> str:
-    """REST URL stejný vzor jako outgoingInvoice.invoicePdf.download (GraphQL nemá invoicePdf u proformy)."""
+    """REST URL (Bearer často vrátí HTML; pro PDF použij UI session — download_proforma_pdf_bytes)."""
     s = get_settings()
     return f"https://{s.allfred_workspace}-api.allfred.io/outgoing-proforma-invoice/{proforma_id}/download"
+
+
+async def _download_pdf_via_allfred_ui_session(resource_path: str) -> bytes:
+    """GET PDF po přihlášení do Allfred web UI (stejně jako Allfred invoices - Equilibrium / n8n).
+
+    ``resource_path`` bez úvodní lomítko, např. ``outgoing-invoice/20/download``.
+    """
+    s = get_settings()
+    email = (s.allfred_ui_email or "").strip()
+    password = s.allfred_ui_password or ""
+    if not email or not password:
+        raise RuntimeError("ALLFRED_UI_EMAIL and ALLFRED_UI_PASSWORD must be set for UI session PDF download")
+    base = f"https://{s.allfred_workspace}-api.allfred.io"
+    path = resource_path.lstrip("/")
+    async with httpx.AsyncClient(base_url=base, follow_redirects=True, timeout=120.0) as client:
+        r1 = await client.get("/login")
+        r1.raise_for_status()
+        m = re.search(r'name="_token"\s+value="([^"]+)"', r1.text)
+        if not m:
+            raise RuntimeError("CSRF token not found on Allfred login page")
+        token = m.group(1)
+        r2 = await client.post(
+            "/login",
+            data={
+                "_token": token,
+                "email": email,
+                "password": password,
+                "remember": "on",
+            },
+        )
+        if r2.status_code >= 400:
+            raise RuntimeError(f"Allfred UI login failed: HTTP {r2.status_code}")
+        r3 = await client.get(f"/{path}")
+        r3.raise_for_status()
+        data = r3.content
+    if not data.startswith(b"%PDF"):
+        head = data[:220].decode("utf-8", errors="replace")
+        if "<html" in head.lower():
+            raise RuntimeError("Allfred PDF URL returned HTML (login failed or insufficient rights)")
+        raise RuntimeError(f"Expected PDF from Allfred UI, got: {head!r}")
+    return data
 
 
 def _ensure_pdf_magic(data: bytes, context: str) -> None:
@@ -332,28 +380,63 @@ async def download_pdf_from_url(url: str) -> bytes:
 
 
 async def download_proforma_pdf_bytes(proforma_id: str) -> bytes:
-    """Stažení PDF proformy (OutgoingProformaInvoice nemá invoicePdf ve schématu — použij REST download)."""
+    """Stažení PDF proformy. GraphQL nemá invoicePdf u proformy — Equilibrium používá UI session + GET."""
+    if allfred_ui_pdf_ready():
+        errs: list[str] = []
+        for rel in (
+            f"outgoing-proforma-invoice/{proforma_id}/download",
+            f"proforma-invoice/{proforma_id}/download",
+        ):
+            try:
+                return await _download_pdf_via_allfred_ui_session(rel)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    errs.append(f"{rel}: 404")
+                    continue
+                raise
+            except RuntimeError as e:
+                errs.append(f"{rel}: {e!s}")
+                continue
+        raise RuntimeError(
+            "Proforma PDF (UI session): žádná cesta nevrátila PDF — " + "; ".join(errs)
+        )
+
     url = outgoing_proforma_pdf_download_url(proforma_id)
     data = await download_pdf_from_url(url)
-    _ensure_pdf_magic(data, "Allfred proforma PDF")
+    _ensure_pdf_magic(data, "Allfred proforma PDF (Bearer)")
     return data
 
 
 async def resolve_outgoing_invoice_pdf_bytes(outgoing_invoice: dict[str, Any]) -> Optional[bytes]:
-    """Use download URL from mutation response or query outgoingInvoice by id."""
+    """PDF finální faktury — při nastaveném UI stejně jako Equilibrium (session), jinak URL z GraphQL."""
+    oid = outgoing_invoice.get("id")
+    if oid and allfred_ui_pdf_ready():
+        try:
+            return await _download_pdf_via_allfred_ui_session(f"outgoing-invoice/{oid}/download")
+        except Exception as e:
+            logger.warning("Allfred UI session PDF failed for invoice %s: %s", oid, e)
     ipdf = outgoing_invoice.get("invoicePdf") or {}
     url = ipdf.get("download")
-    oid = outgoing_invoice.get("id")
     if not url and oid:
         url = await fetch_outgoing_invoice_download_url(str(oid))
     if not url:
         logger.warning("Allfred outgoing invoice %s has no PDF download URL", oid)
         return None
-    return await download_pdf_from_url(url)
+    data = await download_pdf_from_url(url)
+    if data.startswith(b"%PDF"):
+        return data
+    logger.warning("Allfred invoice %s: download URL did not return raw PDF (use ALLFRED_UI_EMAIL/PASSWORD)", oid)
+    return None
 
 
 async def download_outgoing_invoice_pdf_by_id(invoice_id: str) -> Optional[bytes]:
+    if allfred_ui_pdf_ready():
+        try:
+            return await _download_pdf_via_allfred_ui_session(f"outgoing-invoice/{invoice_id}/download")
+        except Exception as e:
+            logger.warning("Allfred UI session invoice PDF failed: %s", e)
     url = await fetch_outgoing_invoice_download_url(invoice_id)
     if not url:
         return None
-    return await download_pdf_from_url(url)
+    data = await download_pdf_from_url(url)
+    return data if data.startswith(b"%PDF") else None

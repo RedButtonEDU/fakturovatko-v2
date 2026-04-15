@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     allfred_vat_reverse_charge: Optional[bool] = None
     # PROFORMA: due_date = issue_date + N days (QuickSetupInvoiceInput)
     allfred_proforma_due_days: int = 14
+    # Web UI login (optional) — PDF download URLs vrací SPA/HTML bez session; Equilibrium/n8n používá cookie po POST /login
+    allfred_ui_email: Optional[str] = None
+    allfred_ui_password: Optional[str] = None
     # Jednotková cena v Kč, pokud objednávka nemá ticket_unit_price_czk (starší řádky)
     allfred_fallback_unit_price_czk: float = 1000.0
 
