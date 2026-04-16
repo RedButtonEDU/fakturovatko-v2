@@ -35,8 +35,9 @@ class Settings(BaseSettings):
     allfred_workspace: str = "redbuttonedu"
     # Dev: treat mock proformas as paid in cron job
     allfred_mock_paid: bool = False
-    # quickSetupClientProjectInvoice — výchozí ID v Allfred workspace (lze přepsat env, viz Coolify).
-    allfred_workspace_company_id: str = "1"
+    # quickSetupClientProjectInvoice — workspaceCompanies v Allfredu: 1=RB Associates s.r.o., 2=Happiness at Work s.r.o.
+    # Exponential Summit: doklady pod HaW (viz workspaceCompanies + bankAccounts v Allfred API).
+    allfred_workspace_company_id: str = "2"
     # Tým „Eventy & Komunity“
     allfred_team_id: str = "12"
     # Uživatel Michal Šrajer
@@ -44,8 +45,8 @@ class Settings(BaseSettings):
     allfred_quick_setup_error_email: str = "lukas@redbuttonedu.cz"
     # VAT rate as Allfred BigInt (e.g. 2100 = 21 %)
     allfred_invoice_vat_rate: int = 2100
-    # QuickSetupInvoiceInput (optional; workspace default bank account if unset)
-    allfred_workspace_bank_account_id: Optional[str] = None
+    # QuickSetupInvoiceInput — u HaW (company id 2) je v Allfredu typicky účet id 2 (CZ …2401761838).
+    allfred_workspace_bank_account_id: Optional[str] = "2"
     allfred_invoice_sequence_id: Optional[str] = None
     # QuickSetupInvoiceInput.vat_reverse_charge (EU reverse charge); unset = omit from mutation
     allfred_vat_reverse_charge: Optional[bool] = None
