@@ -1,5 +1,6 @@
 """Allfred Workspace GraphQL API."""
 
+import copy
 import logging
 import re
 from datetime import date, timedelta
@@ -63,6 +64,24 @@ query OutgoingInvoicePdf($id: ID!) {
   outgoingInvoice(id: $id) {
     id
     invoicePdf { download preview }
+  }
+}
+"""
+
+# Pro finální fakturu: znovu použít projekt z proformy (viz Order.allfred_project_id).
+# RB-Universe docs/allfred_fields.md — QuickSetupProjectInput nemá v introspekci pole `id`;
+# zkusíme ho přidat v payloadu (některé buildy API ho přijmou); jinak fallback bez id = nový projekt.
+PROJECT_FOR_QUICK_SETUP_REUSE_QUERY = """
+query ProjectForQuickSetupReuse($id: ID!) {
+  project(id: $id) {
+    id
+    title
+    billable
+    start_date
+    expected_end_date
+    team { id }
+    projectManager { id }
+    categories { id }
   }
 }
 """
@@ -180,15 +199,89 @@ def _quick_setup_anchor_date() -> date:
     return max(today, floor)
 
 
+def _iso_date_only(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v[:10] if len(v) >= 10 else v.strip()
+    return str(v)
+
+
+def _quick_setup_project_from_allfred_node(
+    project_node: dict[str, Any],
+    *,
+    fallback_start_date: str,
+) -> Optional[dict[str, Any]]:
+    """Sestaví QuickSetupProjectInput z výsledku query project(id)."""
+    pm = project_node.get("projectManager") or {}
+    team = project_node.get("team") or {}
+    pm_id = str(pm.get("id") or "").strip()
+    team_id = str(team.get("id") or "").strip()
+    if not pm_id or not team_id:
+        return None
+    title = (project_node.get("title") or "").strip()
+    if not title:
+        return None
+    start_raw = project_node.get("start_date")
+    start = _iso_date_only(start_raw) if start_raw else fallback_start_date
+    if not start:
+        start = fallback_start_date
+    out: dict[str, Any] = {
+        "title": title,
+        "billable": bool(project_node.get("billable", True)),
+        "project_manager_id": pm_id,
+        "team_id": team_id,
+        "start_date": start,
+    }
+    exp = project_node.get("expected_end_date")
+    if exp:
+        out["expected_end_date"] = _iso_date_only(exp)
+    cats = project_node.get("categories") or []
+    cat_ids: list[str] = []
+    for c in cats:
+        if isinstance(c, dict) and c.get("id") is not None:
+            cat_ids.append(str(c["id"]))
+    if cat_ids:
+        out["category_ids"] = cat_ids
+    return out
+
+
+def _graphql_errors_hint_project_id_rejected(err_msg: str) -> bool:
+    """True when failure is likely due to unknown or invalid `project.id` in quick setup."""
+    lower = err_msg.lower()
+    if "id" not in lower:
+        return False
+    return (
+        "not defined" in lower
+        or "unknown field" in lower
+        or "undefined field" in lower
+        or ("does not exist" in lower and "input" in lower)
+    )
+
+
+async def fetch_project_for_quick_setup_reuse(project_id: str) -> Optional[dict[str, Any]]:
+    """Načte projekt vytvořený u proformy (stejná pole jako QuickSetupProjectInput)."""
+    pid = (project_id or "").strip()
+    if not pid:
+        return None
+    data = await _graphql(PROJECT_FOR_QUICK_SETUP_REUSE_QUERY, {"id": pid})
+    proj = data.get("project")
+    if not isinstance(proj, dict) or not proj.get("id"):
+        return None
+    return proj
+
+
 def build_quick_setup_input(
     order: Order,
     *,
     document_type: Literal["INVOICE", "PROFORMA"] = "INVOICE",
     paid: Optional[bool] = None,
+    project_snapshot: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Build QuickSetupInput for GraphQL (amounts in haléřích).
 
     PROFORMA = zálohová proforma (objednávka); INVOICE = finální faktura po zaplacení (cron).
+    ``project_snapshot`` = výsledek ``project(id)`` pro stejný projekt jako u proformy (jen INVOICE).
     """
     s = get_settings()
     anchor = _quick_setup_anchor_date()
@@ -283,15 +376,31 @@ def build_quick_setup_input(
     if s.allfred_vat_reverse_charge is not None:
         invoice_payload["vat_reverse_charge"] = s.allfred_vat_reverse_charge
 
-    inp: dict[str, Any] = {
-        "client_data": client_data,
-        "project": {
+    project_payload: dict[str, Any]
+    if document_type == "INVOICE" and project_snapshot:
+        reused = _quick_setup_project_from_allfred_node(project_snapshot, fallback_start_date=today)
+        if reused:
+            project_payload = reused
+        else:
+            project_payload = {
+                "title": f"Exponential Summit 2026 — {order.tito_release_title} ({order.public_id[:8]})",
+                "billable": True,
+                "project_manager_id": s.allfred_project_manager_id,
+                "team_id": s.allfred_team_id,
+                "start_date": today,
+            }
+    else:
+        project_payload = {
             "title": f"Exponential Summit 2026 — {order.tito_release_title} ({order.public_id[:8]})",
             "billable": True,
             "project_manager_id": s.allfred_project_manager_id,
             "team_id": s.allfred_team_id,
             "start_date": today,
-        },
+        }
+
+    inp: dict[str, Any] = {
+        "client_data": client_data,
+        "project": project_payload,
         "invoice": invoice_payload,
         "error_email": s.allfred_quick_setup_error_email,
     }
@@ -310,14 +419,49 @@ async def quick_setup_proforma_invoice(order: Order) -> dict[str, Any]:
 
 
 async def quick_setup_client_project_invoice(order: Order) -> dict[str, Any]:
-    """Create client + project + final OutgoingInvoice (INVOICE) — po zaplacení zálohy."""
-    variables = {"input": build_quick_setup_input(order, document_type="INVOICE")}
-    data = await _graphql(QUICK_SETUP_MUTATION, variables)
-    block = data.get("quickSetupClientProjectInvoice") or {}
-    oi = block.get("outgoingInvoice")
-    if not oi or not oi.get("id"):
-        raise RuntimeError(f"quickSetupClientProjectInvoice (INVOICE) unexpected response: {data}")
-    return block
+    """Vytvoří finální OutgoingInvoice; projekt = stejný jako u proformy, pokud to API umožní.
+
+    Načte ``project(id)`` z ``order.allfred_project_id``, znovu použije jeho QuickSetupProjectInput
+    a zkusí přidat ``project.id`` (není v RB-Universe introspekci; při odmítnutí opakování bez ``id``).
+    """
+    snapshot: Optional[dict[str, Any]] = None
+    pid = (order.allfred_project_id or "").strip()
+    if pid:
+        try:
+            snapshot = await fetch_project_for_quick_setup_reuse(pid)
+            if snapshot is None:
+                logger.warning(
+                    "Allfred project %s returned empty; final invoice quick setup uses a fresh project block.",
+                    pid,
+                )
+        except Exception as e:
+            logger.warning("Allfred fetch project %s for invoice reuse failed: %s", pid, e)
+    base_input = build_quick_setup_input(order, document_type="INVOICE", project_snapshot=snapshot)
+
+    async def _run(inp: dict[str, Any]) -> dict[str, Any]:
+        data = await _graphql(QUICK_SETUP_MUTATION, {"input": inp})
+        block = data.get("quickSetupClientProjectInvoice") or {}
+        oi = block.get("outgoingInvoice")
+        if not oi or not oi.get("id"):
+            raise RuntimeError(f"quickSetupClientProjectInvoice (INVOICE) unexpected response: {data}")
+        return block
+
+    if snapshot and snapshot.get("id"):
+        inv_try = copy.deepcopy(base_input)
+        inv_try["project"]["id"] = str(snapshot["id"])
+        try:
+            return await _run(inv_try)
+        except RuntimeError as e:
+            err_txt = str(e)
+            if _graphql_errors_hint_project_id_rejected(err_txt):
+                logger.warning(
+                    "Allfred quickSetup: project.id not accepted (%s); retrying without id (may duplicate project).",
+                    err_txt[:500],
+                )
+                return await _run(base_input)
+            raise
+
+    return await _run(base_input)
 
 
 def outgoing_proforma_pdf_download_url(proforma_id: str) -> str:
