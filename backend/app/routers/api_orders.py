@@ -140,13 +140,14 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(order)
 
-    subject, text = render_order_proforma(public_id=public_id)
+    subject, text, text_html = render_order_proforma(public_id=public_id)
     try:
         if s.gmail_refresh_token:
             email_svc.send_email(
                 order.email,
                 subject,
                 text,
+                body_html=text_html,
                 attachment_bytes=pdf_bytes,
                 attachment_name=f"proforma-{public_id[:8]}.pdf",
             )

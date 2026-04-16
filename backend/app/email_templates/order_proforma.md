@@ -6,7 +6,7 @@ děkujeme za objednávku. V příloze je zálohová faktura ke vstupenkám na Ex
 
 Po jejím zaplacení obdržíte konečnou fakturu a voucher na registraci vstupenek.
 
-V případě, dotazů či změn na faktuře prosím kontaktujte Dominika Holíčka: [dominik@redbuttonedu.cz.](mailto:dominik@redbuttonedu.cz)
+V případě, dotazů či změn na faktuře prosím kontaktujte Dominika Holíčka: dominik@redbuttonedu.cz.
 
 Těšíme se na setkání s Vámi
 

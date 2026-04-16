@@ -155,7 +155,7 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             db.commit()
 
             # Email (text z app/email_templates/order_paid_invoice.md)
-            paid_subject, body = render_order_paid_invoice(
+            paid_subject, body, body_html = render_order_paid_invoice(
                 discount_code=order.tito_discount_code or "(chyba)",
             )
             if s.gmail_refresh_token:
@@ -163,6 +163,7 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                     order.email,
                     paid_subject,
                     body,
+                    body_html=body_html,
                     attachment_bytes=pdf_bytes,
                     attachment_name=f"faktura-{order.public_id[:8]}.pdf",
                 )
