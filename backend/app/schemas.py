@@ -25,6 +25,7 @@ class OrderOut(BaseModel):
     public_id: str
     status: str
     message: str = "ok"
+    allfred_proforma_invoice_no: Optional[str] = None
 
 
 class ReleaseOut(BaseModel):

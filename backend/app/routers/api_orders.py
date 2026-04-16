@@ -97,7 +97,11 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         logger.exception("Allfred quickSetup PROFORMA failed: %s", e)
         raise HTTPException(502, f"Allfred: nelze vytvořit zálohovou fakturu: {e!s}") from e
 
-    proforma_id = str(block["outgoingProformaInvoice"]["id"])
+    op_block = block["outgoingProformaInvoice"]
+    proforma_id = str(op_block["id"])
+    proforma_invoice_no = op_block.get("invoice_no")
+    if proforma_invoice_no is not None:
+        proforma_invoice_no = str(proforma_invoice_no)
     project_id = str(block["project"]["id"])
 
     try:
@@ -155,4 +159,9 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     if not s.gmail_refresh_token:
         msg = "Proforma vytvořena v Allfredu (GMAIL_REFRESH_TOKEN není nastaven — e-mail neodeslán)."
 
-    return OrderOut(public_id=public_id, status=order.status, message=msg)
+    return OrderOut(
+        public_id=public_id,
+        status=order.status,
+        message=msg,
+        allfred_proforma_invoice_no=proforma_invoice_no,
+    )
