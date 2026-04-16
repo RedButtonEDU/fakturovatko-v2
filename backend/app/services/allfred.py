@@ -10,6 +10,7 @@ import httpx
 
 from app.config import get_settings
 from app.models import Order
+from app.services.cnb_rates import CnbEurFixing, fetch_cnb_eur_fixing
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +189,19 @@ def unit_price_hellers(order: Order) -> int:
     return int(round(float(czk) * 100))
 
 
+def unit_price_eur_cents(order: Order, czk_per_one_eur: float) -> int:
+    """Jednotková cena v eurocentech z ceny v Kč (haléře) a kurzu ČNB Kč za 1 EUR."""
+    if czk_per_one_eur <= 0:
+        raise ValueError("czk_per_one_eur must be positive")
+    czk_hal = unit_price_hellers(order)
+    czk = czk_hal / 100.0
+    eur = czk / czk_per_one_eur
+    out = int(round(eur * 100.0))
+    if out <= 0:
+        raise ValueError("EUR unit price rounds to zero")
+    return out
+
+
 def _quick_setup_anchor_date() -> date:
     """Datum vystavení: dnes, ale ne dřív než Allfred minimum (workspace business rules)."""
     s = get_settings()
@@ -277,8 +291,12 @@ def build_quick_setup_input(
     document_type: Literal["INVOICE", "PROFORMA"] = "INVOICE",
     paid: Optional[bool] = None,
     project_snapshot: Optional[dict[str, Any]] = None,
+    eur_fixing: Optional[CnbEurFixing] = None,
 ) -> dict[str, Any]:
-    """Build QuickSetupInput for GraphQL (amounts in haléřích).
+    """Build QuickSetupInput for GraphQL.
+
+    Částky: u ``country_code == SK`` a ``eur_fixing`` — jednotková cena v **eurocentech**, měna EUR;
+    jinak jednotková cena v **haléřích**, měna CZK.
 
     PROFORMA = zálohová proforma (objednávka); INVOICE = finální faktura po zaplacení (cron).
     ``project_snapshot`` = výsledek ``project(id)`` pro stejný projekt jako u proformy (jen INVOICE).
@@ -343,7 +361,27 @@ def build_quick_setup_input(
             "contact_email": c_email,
         }
 
-    uh = unit_price_hellers(order)
+    sk = cc == "SK"
+    if sk:
+        if eur_fixing is None:
+            raise ValueError("eur_fixing (ČNB EUR) is required for Slovak billing")
+        eur_bank = (s.allfred_workspace_bank_account_id_eur or "").strip()
+        if not eur_bank:
+            raise ValueError(
+                "ALLFRED_WORKSPACE_BANK_ACCOUNT_ID_EUR must be set for invoices to Slovakia (EUR bank account in Allfred)."
+            )
+        uh = unit_price_eur_cents(order, eur_fixing.czk_per_one_eur)
+        currency_iso = "EUR"
+        fx_note = (
+            f" Kurz ČNB (střed) k {eur_fixing.valid_for.isoformat()}: "
+            f"1 EUR = {eur_fixing.czk_per_one_eur:.3f} Kč."
+        )
+    else:
+        if eur_fixing is not None:
+            raise ValueError("eur_fixing must only be passed for country SK")
+        uh = unit_price_hellers(order)
+        currency_iso = "CZK"
+        fx_note = ""
     if uh <= 0:
         raise ValueError("unit price must be positive for Allfred invoice")
 
@@ -353,7 +391,7 @@ def build_quick_setup_input(
         "due_date": due_date,
         "date_of_supply": date_of_supply,
         "workspace_company_id": s.allfred_workspace_company_id,
-        "currency_iso": "CZK",
+        "currency_iso": currency_iso,
         "send_oi": False,
         "paid": inv_paid,
         "vat_rate": s.allfred_invoice_vat_rate,
@@ -367,13 +405,17 @@ def build_quick_setup_input(
         "note": (
             f"Objednávka Exponential Summit {order.public_id} — "
             f"Kontakt RB: {s.allfred_contact_name}, {c_email}"
+            f"{fx_note}"
         ),
     }
-    if s.allfred_workspace_bank_account_id:
+    if sk:
+        invoice_payload["workspace_bank_account_id"] = eur_bank
+        invoice_payload["vat_reverse_charge"] = False
+    elif s.allfred_workspace_bank_account_id:
         invoice_payload["workspace_bank_account_id"] = s.allfred_workspace_bank_account_id
     if s.allfred_invoice_sequence_id:
         invoice_payload["invoice_sequence_id"] = s.allfred_invoice_sequence_id
-    if s.allfred_vat_reverse_charge is not None:
+    if not sk and s.allfred_vat_reverse_charge is not None:
         invoice_payload["vat_reverse_charge"] = s.allfred_vat_reverse_charge
 
     project_payload: dict[str, Any]
@@ -409,7 +451,10 @@ def build_quick_setup_input(
 
 async def quick_setup_proforma_invoice(order: Order) -> dict[str, Any]:
     """Create client + project + outgoing PROFORMA via Allfred quick setup (order form)."""
-    variables = {"input": build_quick_setup_input(order, document_type="PROFORMA")}
+    eur_fix: Optional[CnbEurFixing] = None
+    if (order.country_code or "").upper() == "SK":
+        eur_fix = await fetch_cnb_eur_fixing(_quick_setup_anchor_date())
+    variables = {"input": build_quick_setup_input(order, document_type="PROFORMA", eur_fixing=eur_fix)}
     data = await _graphql(QUICK_SETUP_MUTATION, variables)
     block = data.get("quickSetupClientProjectInvoice") or {}
     op = block.get("outgoingProformaInvoice")
@@ -436,7 +481,15 @@ async def quick_setup_client_project_invoice(order: Order) -> dict[str, Any]:
                 )
         except Exception as e:
             logger.warning("Allfred fetch project %s for invoice reuse failed: %s", pid, e)
-    base_input = build_quick_setup_input(order, document_type="INVOICE", project_snapshot=snapshot)
+    eur_fix: Optional[CnbEurFixing] = None
+    if (order.country_code or "").upper() == "SK":
+        eur_fix = await fetch_cnb_eur_fixing(_quick_setup_anchor_date())
+    base_input = build_quick_setup_input(
+        order,
+        document_type="INVOICE",
+        project_snapshot=snapshot,
+        eur_fixing=eur_fix,
+    )
 
     async def _run(inp: dict[str, Any]) -> dict[str, Any]:
         data = await _graphql(QUICK_SETUP_MUTATION, {"input": inp})

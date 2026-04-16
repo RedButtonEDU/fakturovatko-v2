@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     allfred_invoice_vat_rate: int = 2100
     # QuickSetupInvoiceInput — u HaW (company id 2) je v Allfredu typicky účet id 2 (CZ …2401761838).
     allfred_workspace_bank_account_id: Optional[str] = "2"
+    # Účet v EUR u stejné workspace company (povinné pro faktury na SK — částka v EUR dle kurzu ČNB).
+    allfred_workspace_bank_account_id_eur: Optional[str] = None
     allfred_invoice_sequence_id: Optional[str] = None
     # QuickSetupInvoiceInput.vat_reverse_charge (EU reverse charge); unset = omit from mutation
     allfred_vat_reverse_charge: Optional[bool] = None
