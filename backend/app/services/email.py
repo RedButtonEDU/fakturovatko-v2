@@ -1,8 +1,11 @@
 """Gmail send via OAuth2 refresh token (RB Universe pattern)."""
 
 import base64
+import json
 import logging
 import os
+import urllib.error
+import urllib.request
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -66,6 +69,50 @@ def send_email(
     creds = _credentials(s.gmail_refresh_token)
     creds.refresh(Request())
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+    # region agent log
+    oauth_mailbox: Optional[str] = None
+    get_profile_error: Optional[str] = None
+    try:
+        prof = service.users().getProfile(userId="me").execute()
+        oauth_mailbox = (prof.get("emailAddress") or "").strip() or None
+    except Exception as e:
+        get_profile_error = f"{type(e).__name__}:{str(e)[:160]}"
+    if not oauth_mailbox and creds.token:
+        try:
+            req = urllib.request.Request(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {creds.token}"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as r:
+                ui = json.loads(r.read().decode())
+                oauth_mailbox = (ui.get("email") or "").strip() or None
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as e:
+            if not get_profile_error:
+                get_profile_error = f"userinfo:{type(e).__name__}"
+    _want = (s.gmail_from_email or "").strip().lower()
+    _got = (oauth_mailbox or "").strip().lower()
+    agent_log(
+        "H6",
+        "email.py:send_email:oauth_identity",
+        "mailbox_behind_userId_me_vs_mime_from",
+        {
+            "oauth_mailbox_email": oauth_mailbox,
+            "get_profile_or_userinfo_error": get_profile_error,
+            "gmail_from_email_setting": s.gmail_from_email,
+            "oauth_mailbox_matches_mime_from_email": (_got == _want) if oauth_mailbox else None,
+        },
+    )
+    # endregion
+    if oauth_mailbox and _got != _want:
+        logger.warning(
+            "Gmail OAuth mailbox %s differs from GMAIL_FROM_EMAIL %s; many clients show the OAuth "
+            "account as sender. Fix: obtain GMAIL_REFRESH_TOKEN via OAuth as %s, or add “Send mail as” "
+            "for that address on the OAuth account in Google Workspace / Gmail.",
+            oauth_mailbox,
+            s.gmail_from_email,
+            s.gmail_from_email,
+        )
 
     # MIME From = GMAIL_FROM_* (viz config). OAuth účet u GMAIL_REFRESH_TOKEN může v klientovi
     # přebít zobrazení, pokud adresa v From není v Gmailu „Odesílat jako“ pro daný účet.
