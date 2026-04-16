@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.address_utils import billing_address_one_line
 from app.models import Order, OrderStatus
+from app.email_template_loader import render_order_paid_invoice
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
 from app.services import pipedrive as pd_svc
@@ -153,17 +154,14 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
 
             db.commit()
 
-            # Email
-            body = (
-                f"Dobrý den,\n\n"
-                f"v příloze je finální faktura k vaší objednávce.\n"
-                f"Slevový kód na Ti.to: {order.tito_discount_code or '(chyba)'}\n\n"
-                f"Exponential Summit tým"
+            # Email (text z app/email_templates/order_paid_invoice.md)
+            paid_subject, body = render_order_paid_invoice(
+                discount_code=order.tito_discount_code or "(chyba)",
             )
             if s.gmail_refresh_token:
                 email_svc.send_email(
                     order.email,
-                    "Exponential Summit – faktura a slevový kód",
+                    paid_subject,
                     body,
                     attachment_bytes=pdf_bytes,
                     attachment_name=f"faktura-{order.public_id[:8]}.pdf",

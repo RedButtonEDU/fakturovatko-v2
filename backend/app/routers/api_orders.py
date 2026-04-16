@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.models import Order, OrderStatus
 from app.schemas import OrderCreate, OrderOut
+from app.email_template_loader import render_order_proforma
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
 
@@ -135,13 +136,7 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(order)
 
-    subject = "Exponential Summit – zálohová faktura (proforma)"
-    text = (
-        f"Dobrý den,\n\n"
-        f"děkujeme za objednávku. V příloze je zálohová faktura z Allfredu.\n"
-        f"Číslo objednávky: {public_id}\n\n"
-        f"Tým Exponential Summit"
-    )
+    subject, text = render_order_proforma(public_id=public_id)
     try:
         if s.gmail_refresh_token:
             email_svc.send_email(
