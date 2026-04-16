@@ -154,12 +154,13 @@ def allfred_ui_pdf_ready() -> bool:
 
 
 def _split_contact_name(full_name: str) -> tuple[str, str]:
+    """Allfred client_data: first + last. Use first word + rest (not first+last word — avoids „Tým … Button“)."""
     parts = full_name.strip().split()
     if not parts:
         return "?", "?"
     if len(parts) == 1:
         return parts[0], parts[0]
-    return parts[0], parts[-1]
+    return parts[0], " ".join(parts[1:])
 
 
 def unit_price_hellers(order: Order) -> int:
@@ -270,7 +271,10 @@ def build_quick_setup_input(
                 "quantity": float(order.ticket_quantity),
             }
         ],
-        "note": f"Objednávka Exponential Summit {order.public_id}",
+        "note": (
+            f"Objednávka Exponential Summit {order.public_id} — "
+            f"Kontakt RB: {s.allfred_contact_name}, {c_email}"
+        ),
     }
     if s.allfred_workspace_bank_account_id:
         invoice_payload["workspace_bank_account_id"] = s.allfred_workspace_bank_account_id

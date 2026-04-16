@@ -90,7 +90,7 @@ def build_discount_code_label(
     ticket_quantity: int,
 ) -> str:
     """
-    Faktura na firmu: FAKT-<název firmy ASCII, bez mezer, max 10 znaků>.
+    Faktura na firmu: FAKT-<název firmy ASCII, max 10 znaků>-<počet vstupenek>-<5 náhodných A–Z0–9>.
     Jinak: <příjmení ASCII>-<počet vstupenek>-<5 náhodných znaků A–Z0–9>.
     """
     qty = max(1, min(50, int(ticket_quantity)))
@@ -101,7 +101,7 @@ def build_discount_code_label(
             slug = _strip_diacritics_to_ascii_alnum_upper(_surname_from_full_name(full_name))[:10]
         if not slug:
             slug = "X"
-        return f"FAKT-{slug}"
+        return f"FAKT-{slug}-{qty}-{_random_suffix(5)}"
     sur = _strip_diacritics_to_ascii_alnum_upper(_surname_from_full_name(full_name))
     if not sur:
         sur = _strip_diacritics_to_ascii_alnum_upper(full_name)[:20] or "X"
