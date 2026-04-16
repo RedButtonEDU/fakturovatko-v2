@@ -62,13 +62,13 @@ class Settings(BaseSettings):
     google_client_secret: Optional[str] = None
     gmail_refresh_token: Optional[str] = None
     # Odesílatel systémových e-mailů + kontaktní osoba na Allfred dokladu (client_data.contact_*)
-    gmail_from_name: str = "Dominik Holíček"
-    gmail_from_email: str = "dominik@redbuttonedu.cz"
+    gmail_from_name: str = "Tým Red Button"
+    gmail_from_email: str = "hello@redbuttonedu.cz"
 
     @field_validator("gmail_from_email", mode="before")
     @classmethod
     def _gmail_from_email_nonempty(cls, v: object) -> str:
-        default = "dominik@redbuttonedu.cz"
+        default = "hello@redbuttonedu.cz"
         if v is None:
             return default
         if isinstance(v, str):
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     @field_validator("gmail_from_name", mode="before")
     @classmethod
     def _gmail_from_name_nonempty(cls, v: object) -> str:
-        default = "Dominik Holíček"
+        default = "Tým Red Button"
         if v is None:
             return default
         if isinstance(v, str):

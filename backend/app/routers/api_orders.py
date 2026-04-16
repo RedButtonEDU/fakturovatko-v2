@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.debug_ndjson import agent_log
 from app.db import get_db
 from app.models import Order, OrderStatus
 from app.schemas import OrderCreate, OrderOut
@@ -145,15 +144,6 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     )
     try:
         if s.gmail_refresh_token:
-            # region agent log
-            _dom = order.email.split("@", 1)[-1] if "@" in order.email else "?"
-            agent_log(
-                "H4",
-                "api_orders.py:create_order",
-                "before_send_email",
-                {"public_id_prefix": public_id[:8], "recipient_domain": _dom},
-            )
-            # endregion
             email_svc.send_email(
                 order.email,
                 subject,

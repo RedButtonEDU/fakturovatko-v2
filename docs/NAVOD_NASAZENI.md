@@ -126,7 +126,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `ALLFRED_WORKSPACE` | ano | např. `redbuttonedu` |
 | `GOOGLE_CLIENT_ID` | ano* | OAuth klient (Gmail) |
 | `GOOGLE_CLIENT_SECRET` | ano* | OAuth secret |
-| `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro Google účet s oprávněním odesílat jako **`GMAIL_FROM_EMAIL`** (výchozí Dominik / dominik@…) |
+| `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro Google účet s oprávněním odesílat jako **`GMAIL_FROM_EMAIL`** (výchozí **Tým Red Button** / `hello@redbuttonedu.cz`) |
 | `PIPEDRIVE_API_TOKEN` | ano | API token (uživatel s právy zápisu) |
 | `OPENDATA_FS` | ne | API klíč z [OpenData FS](https://opendata.financnasprava.sk/en/page/openapi) — doplnění **IČ DPH** (DIČ) při načtení slovenského IČO z RPO; bez klíče zůstane pole DIČ prázdné |
 | `ALLFRED_MOCK_PAID` | ne | Produkce: `false`. `true` = simulace zaplacení u mock proformy — viz [§11](#11-alfred) |
@@ -221,7 +221,7 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 
 5. Zkopírujte **Client ID** a **Client Secret** → `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
-6. **Refresh token** (scope `gmail.send`, stejný jako v backendu): v repu je skript `scripts/obtain_gmail_refresh_token.py`. Doporučeně ho spusťte **lokálně** (klon repa), v aktivovaném venv s `backend/requirements.txt`, např. `python3 scripts/obtain_gmail_refresh_token.py --secrets-file ~/Downloads/client_secret_….json` (OAuth klient typu **Desktop app** — stažený JSON z Google Cloud). Pro klient typu **Web application** v **Authorized redirect URIs** přidejte přesně `http://localhost:8080/` (knihovna `google_auth_oauthlib` ve výchozím stavu používá host `localhost`, ne `127.0.0.1` — jinak dostanete chybu `redirect_uri_mismatch`). Můžete přidat i druhou řádku `http://127.0.0.1:8080/`, pokud byste někdy měnili host. Výchozí port skriptu je `8080`. Po novém buildu image je stejný soubor v kontejneru jako `python3 /app/scripts/obtain_gmail_refresh_token.py` (OAuth z kontejneru často potřebuje mapování portu na hosta — jednodušší je lokální běh). V prohlížeči se přihlaste **účtem, pod kterým má Gmail API oprávnění posílat jako `GMAIL_FROM_EMAIL`** (výchozí v kódu je `dominik@redbuttonedu.cz`); výstup `GMAIL_REFRESH_TOKEN=…` vložte do Coolify. **Přihlášení do Allfred webu** (`ALLFRED_UI_EMAIL`) je jen pro stažení PDF a **nemění** odesílatele Gmailu. Pokud v schránce stále vidíte jinou adresu než v `GMAIL_FROM_EMAIL`, zkontrolujte v Coolify, že tam **není** přepsána špatná hodnota (prázdný řetězec se bere jako výchozí z kódu), případně druhý e-mail z Allfredu / Ti.to.
+6. **Refresh token** (scope `gmail.send`, stejný jako v backendu): v repu je skript `scripts/obtain_gmail_refresh_token.py`. Doporučeně ho spusťte **lokálně** (klon repa), v aktivovaném venv s `backend/requirements.txt`, např. `python3 scripts/obtain_gmail_refresh_token.py --secrets-file ~/Downloads/client_secret_….json` (OAuth klient typu **Desktop app** — stažený JSON z Google Cloud). Pro klient typu **Web application** v **Authorized redirect URIs** přidejte přesně `http://localhost:8080/` (knihovna `google_auth_oauthlib` ve výchozím stavu používá host `localhost`, ne `127.0.0.1` — jinak dostanete chybu `redirect_uri_mismatch`). Můžete přidat i druhou řádku `http://127.0.0.1:8080/`, pokud byste někdy měnili host. Výchozí port skriptu je `8080`. Po novém buildu image je stejný soubor v kontejneru jako `python3 /app/scripts/obtain_gmail_refresh_token.py` (OAuth z kontejneru často potřebuje mapování portu na hosta — jednodušší je lokální běh). V prohlížeči se přihlaste **účtem `hello@redbuttonedu.cz`** (nebo účtem s oprávněním odesílat jako `GMAIL_FROM_EMAIL`); výstup `GMAIL_REFRESH_TOKEN=…` vložte do Coolify. Výchozí jméno a adresa odesílatele v aplikaci jsou **Tým Red Button** a `hello@redbuttonedu.cz` (`GMAIL_FROM_NAME` / `GMAIL_FROM_EMAIL`). **Přihlášení do Allfred webu** (`ALLFRED_UI_EMAIL`) je jen pro stažení PDF a **nemění** odesílatele Gmailu.
 
 7. V **Google Workspace Admin** (pokud používáte) ověřte, že účet smí používat danou OAuth aplikaci.
 
@@ -299,7 +299,7 @@ Propagace DNS může trvat řádově minuty až hodiny.
 
 ## 14. Ověření po nasazení
 
-1. `GET https://invoice.exponentialsummit.cz/health` → odpověď `{"status":"ok"}`.
+1. `GET https://invoice.exponentialsummit.cz/health` → odpověď obsahuje `status`, `gmail_from_email`, `gmail_from_name` (výchozí odesílatel z konfigurace).
 
 2. Otevřete `https://invoice.exponentialsummit.cz` — načte se formulář.
 
@@ -317,7 +317,7 @@ Propagace DNS může trvat řádově minuty až hodiny.
 |---------|------------------|
 | „No repositories found“ | GitHub App má **Contents** + **Metadata** (Read), uloženo na GitHubu; stejná App v Coolify; případně System wide |
 | Permissions v Coolify stále N/A | Často kosmetika; ověřte, zda už jdou **vybrat repa** a deploy funguje |
-| E-mail se neodesílá / špatný odesílatel | `GOOGLE_*`, `GMAIL_REFRESH_TOKEN`, scope `gmail.send`; v logu aplikace řádek `Gmail send: MIME From header` musí odpovídat `GMAIL_FROM_EMAIL` / výchozí Dominik; OAuth účet musí smět odesílat jako tato adresa; `ALLFRED_UI_EMAIL` není odesílatel Gmailu |
+| E-mail se neodesílá / špatný odesílatel | `GOOGLE_*`, `GMAIL_REFRESH_TOKEN`, scope `gmail.send`; `GMAIL_FROM_NAME` / `GMAIL_FROM_EMAIL` (výchozí Tým Red Button / hello@); OAuth účet musí odpovídat odesílání z této adresy; `ALLFRED_UI_EMAIL` není odesílatel Gmailu |
 | Prázdná databáze po deployi | Chybí volume na `/data` nebo špatné `DATABASE_URL` |
 | Cron nevolá job | Špatný `X-Cron-Token`, špatný port (8000), příkaz na jiném kontejneru |
 | 422 / chyba Pipedrive u pole 2026 | V Pipedrive UI přidat option **2026** do set pole H@W Live! |

@@ -2,9 +2,8 @@
 """
 Jednorázové získání GMAIL_REFRESH_TOKEN pro Fakturovatko (Gmail API).
 
-Přihlaste se Google účtem, který má v Gmailu oprávnění odesílat poštu jako adresa v
-GMAIL_FROM_EMAIL (výchozí v aplikaci dominik@redbuttonedu.cz) — buď jako primární
-schránka toho účtu, nebo přes „Odesílat jako“ / Workspace alias.
+Přihlaste se Google účtem hello@redbuttonedu.cz (nebo účtem s oprávněním odesílat jako
+GMAIL_FROM_EMAIL — výchozí v aplikaci hello@redbuttonedu.cz, jméno „Tým Red Button“).
 
 Před spuštěním:
   - V Google Cloud Console zapněte Gmail API.
