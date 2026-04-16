@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.address_utils import billing_address_one_line
 from app.models import Order, OrderStatus
 from app.email_template_loader import render_order_paid_invoice
@@ -20,6 +20,17 @@ logger = logging.getLogger(__name__)
 
 def _proforma_paid(pf: dict[str, Any]) -> bool:
     return bool(pf.get("paid_at"))
+
+
+def _proforma_fake_paid_from_config(pf: dict[str, Any], s: Settings) -> bool:
+    """True pokud id nebo invoice_no proformy je v ALLFRED_FAKE_PAID_PROFORMA_REFS (viz Settings)."""
+    raw = (s.allfred_fake_paid_proforma_refs or "").strip()
+    if not raw:
+        return False
+    refs = {x.strip() for x in raw.split(",") if x.strip()}
+    pid = str(pf.get("id") or "")
+    ino = str(pf.get("invoice_no") or "")
+    return pid in refs or ino in refs
 
 
 def _find_invoice_for_project(
@@ -97,6 +108,13 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                     skipped += 1
                     continue
                 paid = _proforma_paid(pf)
+                if not paid and _proforma_fake_paid_from_config(pf, s):
+                    logger.warning(
+                        "ALLFRED_FAKE_PAID: proforma id=%s invoice_no=%s — bráno jako zaplacená (paid_at chybí)",
+                        pf.get("id"),
+                        pf.get("invoice_no"),
+                    )
+                    paid = True
                 if not paid:
                     skipped += 1
                     continue

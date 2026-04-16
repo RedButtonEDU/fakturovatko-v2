@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     allfred_fallback_unit_price_czk: float = 1000.0
     # Celé jméno kontaktu na Allfred PDF (QuickSetup client_data contact_*); ne GMAIL_FROM_NAME (odesílatel e-mailu).
     allfred_contact_name: str = "Dominik Holíček"
+    # Čárkou oddělené Allfred id proformy a/nebo invoice_no — považovat za zaplacené i bez paid_at (workaround, když Allfred neumí simulovat úhradu). Po testu smažte.
+    allfred_fake_paid_proforma_refs: str = ""
 
     # Gmail (same pattern as RB Universe)
     google_client_id: Optional[str] = None

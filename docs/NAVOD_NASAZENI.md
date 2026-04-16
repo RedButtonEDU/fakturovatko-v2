@@ -125,6 +125,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `ALLFRED_API_KEY` | ano | Bearer token Workspace API |
 | `ALLFRED_WORKSPACE` | ano | např. `redbuttonedu` |
 | `ALLFRED_CONTACT_NAME` | ne | Jméno kontaktu na PDF v Allfredu (výchozí **Dominik Holíček**); odlišné od `GMAIL_FROM_NAME` (odesílatel e-mailu) |
+| `ALLFRED_FAKE_PAID_PROFORMA_REFS` | ne | Čárkou: Allfred **id** proformy a/nebo **invoice_no** — job `poll-payments` je považuje za zaplacené i bez `paid_at` (dočasný workaround). Po testu odstranit. |
 | `GOOGLE_CLIENT_ID` | ano* | OAuth klient (Gmail) |
 | `GOOGLE_CLIENT_SECRET` | ano* | OAuth secret |
 | `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro Google účet s oprávněním odesílat jako **`GMAIL_FROM_EMAIL`** (výchozí **Tým Red Button** / `hello@redbuttonedu.cz`) |
