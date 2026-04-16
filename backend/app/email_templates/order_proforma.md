@@ -2,7 +2,12 @@ Subject: Exponential Summit – zálohová faktura (proforma)
 
 Dobrý den,
 
-děkujeme za objednávku. V příloze je zálohová faktura z Allfredu.
-Číslo objednávky: $public_id
+děkujeme za objednávku. V příloze je zálohová faktura ke vstupenkám na Exponential Summit 2026.
 
-Tým Exponential Summit
+Po jejím zaplacení obdržíte konečnou fakturu a voucher na registraci vstupenek.
+
+V případě, dotazů či změn na faktuře prosím kontaktujte Dominika Holíčka: [dominik@redbuttonedu.cz.](mailto:dominik@redbuttonedu.cz)
+
+Těšíme se na setkání s Vámi
+
+Tým Red Button EDU
