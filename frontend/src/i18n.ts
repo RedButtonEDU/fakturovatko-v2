@@ -103,6 +103,49 @@ export function detectLang(): Lang {
   return 'en'
 }
 
+/**
+ * Jazyk z URL: nejdřív `?lang=cs` / `?lang=en`, jinak první segment cesty `/cs/…` nebo `/en/…`.
+ */
+export function langFromUrl(): Lang | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const u = new URL(window.location.href)
+    const q = u.searchParams.get('lang')?.trim().toLowerCase()
+    if (q === 'cs' || q === 'en') return q
+
+    const first = u.pathname.split('/').filter(Boolean)[0]?.toLowerCase()
+    if (first === 'cs' || first === 'en') return first as Lang
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** Pořadí: URL → prohlížeč */
+export function initialLang(): Lang {
+  return langFromUrl() ?? detectLang()
+}
+
+/**
+ * Zapíše jazyk do adresy (replaceState): u cesty jen `/cs` nebo `/en` mění segment,
+ * jinak nastaví / doplní `?lang=`.
+ */
+export function applyLangToBrowserUrl(lang: Lang): void {
+  if (typeof window === 'undefined') return
+  const u = new URL(window.location.href)
+  const segments = u.pathname.split('/').filter(Boolean)
+  const onlyLangPath = segments.length === 1 && (segments[0] === 'cs' || segments[0] === 'en')
+
+  if (onlyLangPath) {
+    u.pathname = `/${lang}/`
+    u.searchParams.delete('lang')
+  } else {
+    u.searchParams.set('lang', lang)
+  }
+  const qs = u.searchParams.toString()
+  history.replaceState(null, '', `${u.pathname}${qs ? `?${qs}` : ''}${u.hash}`)
+}
+
 export function t(lang: Lang, key: keyof typeof STRINGS.cs): string {
   return STRINGS[lang][key] ?? key
 }

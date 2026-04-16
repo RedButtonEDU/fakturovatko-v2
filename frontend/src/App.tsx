@@ -9,7 +9,14 @@ import {
   type Country,
   type Release,
 } from './api'
-import { countryDisplayName, detectLang, orderCountriesForDisplay, t, type Lang } from './i18n'
+import {
+  applyLangToBrowserUrl,
+  countryDisplayName,
+  initialLang,
+  orderCountriesForDisplay,
+  t,
+  type Lang,
+} from './i18n'
 
 const VAT = 0.21
 
@@ -33,7 +40,11 @@ function formatMoney(n: number, currency: string) {
 }
 
 export default function App() {
-  const [lang, setLang] = useState<Lang>(() => detectLang())
+  const [lang, setLang] = useState<Lang>(() => initialLang())
+
+  useEffect(() => {
+    document.documentElement.lang = lang === 'cs' ? 'cs' : 'en'
+  }, [lang])
   const [releases, setReleases] = useState<Release[]>([])
   const [countries, setCountries] = useState<Country[]>([])
   const [eventMeta, setEventMeta] = useState<{ show_prices_ex_tax: boolean; currency: string } | null>(
@@ -192,10 +203,24 @@ export default function App() {
           <p className="lead">{t(lang, 'subtitle')}</p>
           <div className="lang-switch">
             <span>{t(lang, 'lang')}:</span>
-            <button type="button" className={lang === 'cs' ? 'active' : ''} onClick={() => setLang('cs')}>
+            <button
+              type="button"
+              className={lang === 'cs' ? 'active' : ''}
+              onClick={() => {
+                setLang('cs')
+                applyLangToBrowserUrl('cs')
+              }}
+            >
               Čeština
             </button>
-            <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>
+            <button
+              type="button"
+              className={lang === 'en' ? 'active' : ''}
+              onClick={() => {
+                setLang('en')
+                applyLangToBrowserUrl('en')
+              }}
+            >
               English
             </button>
           </div>
