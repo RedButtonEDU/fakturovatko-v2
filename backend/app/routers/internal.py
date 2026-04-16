@@ -34,5 +34,11 @@ async def poll_payments(
     db: Session = Depends(get_db),
     _auth: None = Depends(verify_cron),
 ):
+    s = get_settings()
+    if not s.cron_poll_payments_enabled:
+        return {
+            "skipped": True,
+            "reason": "cron_poll_payments_enabled is false (set CRON_POLL_PAYMENTS_ENABLED=true to run)",
+        }
     result = await process_paid_orders(db)
     return result

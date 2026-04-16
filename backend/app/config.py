@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     # Cron (Coolify: CRON_SECRET)
     cron_secret: str = "change-me-in-production"
+    # POST /internal/jobs/poll-payments — druhá fáze (kontrola plateb, Ti.to, finální faktura). False = no-op.
+    cron_poll_payments_enabled: bool = False
 
     # Ti.to
     tito_api_key: Optional[str] = None
