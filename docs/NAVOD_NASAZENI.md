@@ -124,6 +124,7 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 | `TITO_EVENT_SLUG` | ano | `es-2026` |
 | `ALLFRED_API_KEY` | ano | Bearer token Workspace API |
 | `ALLFRED_WORKSPACE` | ano | např. `redbuttonedu` |
+| `ALLFRED_CONTACT_NAME` | ne | Jméno kontaktu na PDF v Allfredu (výchozí **Dominik Holíček**); odlišné od `GMAIL_FROM_NAME` (odesílatel e-mailu) |
 | `GOOGLE_CLIENT_ID` | ano* | OAuth klient (Gmail) |
 | `GOOGLE_CLIENT_SECRET` | ano* | OAuth secret |
 | `GMAIL_REFRESH_TOKEN` | ano* | Refresh token pro Google účet s oprávněním odesílat jako **`GMAIL_FROM_EMAIL`** (výchozí **Tým Red Button** / `hello@redbuttonedu.cz`) |

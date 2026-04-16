@@ -203,8 +203,8 @@ def build_quick_setup_input(
         issue_date = due_date = date_of_supply = today
         inv_paid = True if paid is None else paid
         inv_type = "INVOICE"
-    # Kontaktní osoba na dokladu = firemní kontakt (GMAIL_FROM_*), ne jméno zákazníka z formuláře
-    c_fn, c_ln = _split_contact_name(s.gmail_from_name)
+    # Kontaktní osoba na dokladu (PDF) — allfred_contact_name; e-mail kontaktu = GMAIL_FROM_EMAIL
+    c_fn, c_ln = _split_contact_name(s.allfred_contact_name)
     c_email = (s.gmail_from_email or "").strip()
     if not c_email:
         raise ValueError("gmail_from_email is required for Allfred client_data contact_email")

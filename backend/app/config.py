@@ -56,12 +56,14 @@ class Settings(BaseSettings):
     allfred_ui_password: Optional[str] = None
     # Jednotková cena v Kč, pokud objednávka nemá ticket_unit_price_czk (starší řádky)
     allfred_fallback_unit_price_czk: float = 1000.0
+    # Celé jméno kontaktu na Allfred PDF (QuickSetup client_data contact_*); ne GMAIL_FROM_NAME (odesílatel e-mailu).
+    allfred_contact_name: str = "Dominik Holíček"
 
     # Gmail (same pattern as RB Universe)
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
     gmail_refresh_token: Optional[str] = None
-    # Odesílatel systémových e-mailů + kontaktní osoba na Allfred dokladu (client_data.contact_*)
+    # Odesílatel systémových e-mailů (MIME From); kontakt na dokladu v Allfredu viz allfred_contact_name
     gmail_from_name: str = "Tým Red Button"
     gmail_from_email: str = "hello@redbuttonedu.cz"
 
@@ -82,6 +84,17 @@ class Settings(BaseSettings):
     @classmethod
     def _gmail_from_name_nonempty(cls, v: object) -> str:
         default = "Tým Red Button"
+        if v is None:
+            return default
+        if isinstance(v, str):
+            s = v.strip()
+            return s if s else default
+        return default
+
+    @field_validator("allfred_contact_name", mode="before")
+    @classmethod
+    def _allfred_contact_name_nonempty(cls, v: object) -> str:
+        default = "Dominik Holíček"
         if v is None:
             return default
         if isinstance(v, str):
