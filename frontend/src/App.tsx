@@ -235,8 +235,7 @@ export default function App() {
       <main className="shell">
         {done ? (
           <div className="card success">
-            <h2>{t(lang, 'success')}</h2>
-            <p>{t(lang, 'successDetail')}</p>
+            <div className="success-message">{t(lang, 'successMessage')}</div>
           </div>
         ) : (
           <form className="card form" onSubmit={onSubmit}>

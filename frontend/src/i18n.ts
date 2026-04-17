@@ -57,8 +57,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     total: 'Celkem',
     selectTicket: 'Vyberte vstupenku',
     error: 'Chyba',
-    success: 'Objednávka odeslána',
-    successDetail: 'Zkontrolujte e-mail s proforma fakturou.',
+    successMessage:
+      'Děkujeme za váš zájem o Exponential Summit - objednávku jsme přijali a v e-mailu na vás už čeká zálohová faktura.\nPo zaplacení Vám odešleme voucher na registraci vstupenek.\n\nA těším se v říjnu 🙂\n\nTým Red Button EDU',
     icoNotFound: 'Subjekt s tímto IČO nebyl nalezen.',
     icoNotFoundSk: 'Subjekt s tímto IČO nebyl nalezen v registru RPO (ŠÚ SR).',
     lookupTimeout:
@@ -90,8 +90,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     total: 'Total',
     selectTicket: 'Select ticket',
     error: 'Error',
-    success: 'Order submitted',
-    successDetail: 'Check your e-mail for the proforma invoice.',
+    successMessage:
+      'Thank you for your interest in Exponential Summit — we have received your order, and the proforma invoice is already waiting for you in your inbox.\nOnce you pay, we will send you a voucher to register your ticket.\n\nI look forward to seeing you in October 🙂\n\nTeam Red Button EDU',
     icoNotFound: 'No company found for this registration number.',
     icoNotFoundSk: 'No company found in the Slovak RPO register (ŠÚ SR) for this ID.',
     lookupTimeout:

@@ -313,10 +313,12 @@
   font-size: 0.9rem;
 }
 
-.success h2 {
-  margin-top: 0;
-  color: #7fd8a8;
-  font-weight: 800;
+.success-message {
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.65;
+  color: var(--gray-200);
+  font-size: 0.95rem;
 }
 
 .footer {
