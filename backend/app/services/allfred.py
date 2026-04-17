@@ -8,6 +8,7 @@ from typing import Any, Literal, Optional
 
 import httpx
 
+from app.agent_debug_log import log_event
 from app.config import get_settings
 from app.models import Order
 from app.services.cnb_rates import CnbEurFixing, fetch_cnb_eur_fixing
@@ -385,6 +386,9 @@ def build_quick_setup_input(
     if uh <= 0:
         raise ValueError("unit price must be positive for Allfred invoice")
 
+    buyer_line = f"{order.full_name.strip()}, {order.email.strip()}"
+    note_body = f"Objednávka vstupenek na Exponential Summit. Objednávající: {buyer_line}{fx_note}"
+
     invoice_payload: dict[str, Any] = {
         "type": inv_type,
         "issue_date": issue_date,
@@ -402,11 +406,7 @@ def build_quick_setup_input(
                 "quantity": float(order.ticket_quantity),
             }
         ],
-        "note": (
-            f"Objednávka Exponential Summit {order.public_id} — "
-            f"Kontakt RB: {s.allfred_contact_name}, {c_email}"
-            f"{fx_note}"
-        ),
+        "note": note_body,
     }
     if sk_eur:
         invoice_payload["workspace_bank_account_id"] = eur_bank
@@ -446,6 +446,21 @@ def build_quick_setup_input(
         "invoice": invoice_payload,
         "error_email": s.allfred_quick_setup_error_email,
     }
+    # #region agent log
+    log_event(
+        "allfred.py:build_quick_setup_input",
+        "invoice VAT fields sent to QuickSetup",
+        {
+            "h2_country_cc": cc,
+            "h2_sk_eur": sk_eur,
+            "h2_vat_rate": invoice_payload.get("vat_rate"),
+            "h2_vat_reverse_charge": invoice_payload.get("vat_reverse_charge"),
+            "h2_client_has_vat_no": bool((order.vat_id or "").strip()),
+            "h2_currency": currency_iso,
+        },
+        hypothesis_id="H2-vat-payload",
+    )
+    # #endregion
     return inp
 
 

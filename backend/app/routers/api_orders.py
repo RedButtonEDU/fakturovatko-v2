@@ -8,6 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.agent_debug_log import email_domain, log_event
 from app.config import get_settings
 from app.db import get_db
 from app.models import Order, OrderStatus
@@ -140,9 +141,31 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(order)
 
+    # #region agent log
+    log_event(
+        "api_orders.py:create_order",
+        "before proforma email",
+        {
+            "h1_gmail_refresh_configured": bool(s.gmail_refresh_token),
+            "h1_order_email_domain": email_domain(order.email),
+        },
+        hypothesis_id="H1-email-recipient",
+    )
+    # #endregion
+
     subject, text, text_html = render_order_proforma(public_id=public_id)
     try:
         if s.gmail_refresh_token:
+            # #region agent log
+            log_event(
+                "api_orders.py:create_order",
+                "calling Gmail send_email",
+                {
+                    "h1_send_to_domain": email_domain(order.email),
+                },
+                hypothesis_id="H1-email-recipient",
+            )
+            # #endregion
             email_svc.send_email(
                 order.email,
                 subject,
@@ -155,6 +178,16 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         order.last_error = f"email: {e}"
         db.commit()
         raise HTTPException(503, f"Could not send email: {e}") from e
+
+    # #region agent log
+    if not s.gmail_refresh_token:
+        log_event(
+            "api_orders.py:create_order",
+            "proforma email skipped (no Gmail OAuth)",
+            {"h1_email_skipped": True},
+            hypothesis_id="H1-email-recipient",
+        )
+    # #endregion
 
     msg = "Proforma vytvořena v Allfredu a odeslána e-mailem."
     if not s.gmail_refresh_token:
