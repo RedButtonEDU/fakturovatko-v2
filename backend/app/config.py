@@ -47,11 +47,10 @@ class Settings(BaseSettings):
     allfred_invoice_vat_rate: int = 2100
     # QuickSetupInvoiceInput — u HaW (company id 2) je v Allfredu typicky účet id 2 (CZ …2401761838).
     allfred_workspace_bank_account_id: Optional[str] = "2"
-    # Účet v EUR u stejné workspace company (použije se jen když ALLFRED_SK_INVOICE_IN_EUR=true).
-    allfred_workspace_bank_account_id_eur: Optional[str] = None
-    # SK: True = EUR + ČNB + EUR účet; False = CZK jako u domácích (dočasně, dokud Allfred neopraví EUR quick setup).
-    # Po opravě změnit výchozí na True — v Coolify nic nastavovat.
-    allfred_sk_invoice_in_eur: bool = False
+    # Účet v EUR u HaW (workspace company id 2) — pro SK doklady při allfred_sk_invoice_in_eur.
+    allfred_workspace_bank_account_id_eur: Optional[str] = "5"
+    # SK: True = doklad v EUR (kurz ČNB) + účet allfred_workspace_bank_account_id_eur; False = CZK + korunový účet.
+    allfred_sk_invoice_in_eur: bool = True
     allfred_invoice_sequence_id: Optional[str] = None
     # QuickSetupInvoiceInput.vat_reverse_charge (EU reverse charge); unset = omit from mutation
     allfred_vat_reverse_charge: Optional[bool] = None
