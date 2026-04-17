@@ -61,6 +61,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     successDetail: 'Zkontrolujte e-mail s proforma fakturou.',
     icoNotFound: 'Subjekt s tímto IČO nebyl nalezen.',
     icoNotFoundSk: 'Subjekt s tímto IČO nebyl nalezen v registru RPO (ŠÚ SR).',
+    lookupTimeout:
+      'Načtení údajů vypršelo — zkuste to znovu za chvíli nebo vyplňte údaje ručně.',
     required: 'Vyplňte povinná pole.',
   },
   en: {
@@ -92,6 +94,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     successDetail: 'Check your e-mail for the proforma invoice.',
     icoNotFound: 'No company found for this registration number.',
     icoNotFoundSk: 'No company found in the Slovak RPO register (ŠÚ SR) for this ID.',
+    lookupTimeout:
+      'Loading company details timed out — try again shortly or enter the details manually.',
     required: 'Please fill in required fields.',
   },
 }

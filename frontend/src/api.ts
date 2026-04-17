@@ -29,12 +29,26 @@ export async function getCountries(): Promise<Country[]> {
   return r.json()
 }
 
+/** Request aborted (browser) nebo 504 z API — zobrazit lookupTimeout. */
+export function isAresLookupTimeout(e: unknown): boolean {
+  if (e instanceof DOMException && e.name === 'AbortError') return true
+  if (e instanceof Error && e.message === 'LOOKUP_TIMEOUT') return true
+  return false
+}
+
 export async function lookupAres(ico: string, country: string) {
   const q = new URLSearchParams({ ico, country })
-  const r = await fetch(`${base}/api/ares/lookup?${q}`)
-  if (r.status === 404) return null
-  if (!r.ok) throw new Error('ares')
-  return r.json()
+  const ac = new AbortController()
+  const tid = setTimeout(() => ac.abort(), 40000)
+  try {
+    const r = await fetch(`${base}/api/ares/lookup?${q}`, { signal: ac.signal })
+    if (r.status === 404) return null
+    if (r.status === 504) throw new Error('LOOKUP_TIMEOUT')
+    if (!r.ok) throw new Error('ares')
+    return r.json()
+  } finally {
+    clearTimeout(tid)
+  }
 }
 
 export type OrderPayload = {

@@ -120,7 +120,7 @@ def _normalize_lists_payload(data: Any) -> dict[str, Any]:
 
 
 async def fetch_lists(api_key: str) -> Optional[dict[str, Any]]:
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
         r = await client.get(f"{IZ_BASE}/lists", headers={"key": api_key})
         if r.status_code != 200:
             return None
@@ -130,7 +130,7 @@ async def fetch_lists(api_key: str) -> Optional[dict[str, Any]]:
 
 
 async def fetch_list_detail(api_key: str, slug: str) -> Optional[dict[str, Any]]:
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
         r = await client.get(f"{IZ_BASE}/lists/{slug}", headers={"key": api_key})
         if r.status_code != 200:
             return None
@@ -145,7 +145,7 @@ async def search_list_page(
     search: str,
     page: int = 1,
 ) -> Optional[dict[str, Any]]:
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
         r = await client.get(
             f"{IZ_BASE}/data/{slug}/search",
             headers={"key": api_key},

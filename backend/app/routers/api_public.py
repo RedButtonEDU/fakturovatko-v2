@@ -1,7 +1,9 @@
 """Public API: releases, countries, ARES lookup."""
 
+import logging
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, HTTPException, Query
 
 from app.config import get_settings
@@ -9,6 +11,8 @@ from app.countries import get_country_options
 from app.schemas import CountryOut, ReleaseOut
 from app.services import tito as tito_svc
 from app.services.ares import lookup_ico
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -78,7 +82,19 @@ def list_countries():
 
 @router.get("/ares/lookup")
 async def ares_lookup(ico: str = Query(..., min_length=3), country: str = Query("CZ", min_length=2, max_length=2)):
-    data = await lookup_ico(ico, country)
+    try:
+        data = await lookup_ico(ico, country)
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Register lookup timed out — try again in a moment.",
+        ) from None
+    except httpx.RequestError as e:
+        logger.warning("ares lookup upstream error: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail="Register lookup failed — try again later.",
+        ) from None
     if not data:
         raise HTTPException(404, "Company not found for this registration number")
     return data

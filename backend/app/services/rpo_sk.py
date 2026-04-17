@@ -7,6 +7,7 @@ DIČ / IČ DPH: odpoveď RPO **neobsahuje** daňové čísla. DIČ (10 číslic)
 **nie sú** matematicky odvodené od IČO — dopĺňajú sa ručne alebo z iného zdroja (OpenData FS, komerčné API).
 """
 
+import asyncio
 import logging
 from typing import Any, Optional
 
@@ -18,6 +19,11 @@ from app.services import opendata_fs_sk
 logger = logging.getLogger(__name__)
 
 STATISTICS_SK_SEARCH = "https://api.statistics.sk/rpo/v1/search"
+
+# RPO bývá pomalé nebo neodpovídá; dlouhý timeout působí ve UI jako „zaseknutí“.
+_RPO_HTTP_TIMEOUT = httpx.Timeout(22.0, connect=8.0)
+# OpenData FS je doplňkové — nesmí blokovat návrat údajů z RPO na minuty.
+_OPENDATA_FS_BUDGET_S = 12.0
 
 
 def _digits(s: str) -> str:
@@ -85,7 +91,7 @@ async def lookup_sk_ico(ico: str) -> Optional[dict[str, Any]]:
     digits = _digits(ico)
     if not digits:
         return None
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=_RPO_HTTP_TIMEOUT) as client:
         r = await client.get(
             STATISTICS_SK_SEARCH,
             params={"identifier": digits},
@@ -104,9 +110,18 @@ async def lookup_sk_ico(ico: str) -> Optional[dict[str, Any]]:
     key = get_settings().opendata_fs
     if key:
         try:
-            dic = await opendata_fs_sk.lookup_dic_by_ico(key, digits)
+            dic = await asyncio.wait_for(
+                opendata_fs_sk.lookup_dic_by_ico(key, digits),
+                timeout=_OPENDATA_FS_BUDGET_S,
+            )
             if dic:
                 parsed["vat_id"] = f"SK{dic}"
+        except asyncio.TimeoutError:
+            logger.warning(
+                "OpenData FS IČ DPH lookup timed out after %ss (ico=%s)",
+                _OPENDATA_FS_BUDGET_S,
+                digits,
+            )
         except Exception as e:
             logger.debug("OpenData FS IČ DPH lookup failed: %s", e)
     return parsed

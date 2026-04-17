@@ -5,6 +5,7 @@ import {
   getCountries,
   getEventMeta,
   getReleases,
+  isAresLookupTimeout,
   lookupAres,
   type Country,
   type Release,
@@ -128,8 +129,12 @@ export default function App() {
       if (data.zip) setAddressZip(data.zip)
       if (data.city) setAddressCity(data.city)
       if (data.vat_id) setVatId(data.vat_id)
-    } catch {
-      setErr(t(lang, country === 'SK' ? 'icoNotFoundSk' : 'icoNotFound'))
+    } catch (e) {
+      if (isAresLookupTimeout(e)) {
+        setErr(t(lang, 'lookupTimeout'))
+      } else {
+        setErr(t(lang, country === 'SK' ? 'icoNotFoundSk' : 'icoNotFound'))
+      }
     } finally {
       setIcoLoading(false)
     }
