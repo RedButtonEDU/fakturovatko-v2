@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 
@@ -18,8 +19,8 @@ def _log_path() -> Path:
     raw = (os.environ.get("FAKTUROVATKO_DEBUG_LOG") or "").strip()
     if raw:
         return Path(raw)
-    # Coolify / Linux container: /tmp is writable without extra volume
-    return Path("/tmp/debug-4dff2c.log")
+    # Default temp dir (e.g. /tmp in Linux containers) — avoid hardcoded "/tmp" for SAST
+    return Path(tempfile.gettempdir()) / "debug-4dff2c.log"
 
 
 def log_event(

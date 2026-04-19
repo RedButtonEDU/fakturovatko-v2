@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
+
+import httpx
 
 INTROSPECTION_QUERY = """
 query IntrospectionQuery {
@@ -44,21 +44,21 @@ def main() -> int:
     ws = (os.environ.get("ALLFRED_WORKSPACE") or "redbuttonedu").strip()
     url = f"https://{ws}-api.allfred.io/workspace-api"
     body = json.dumps({"query": INTROSPECTION_QUERY}).encode()
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        },
-        method="POST",
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+    }
     try:
-        with urllib.request.urlopen(req, timeout=180) as r:
-            data = json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        print(e.read().decode()[:2000], file=sys.stderr)
-        return e.code
+        with httpx.Client(timeout=180.0) as client:
+            r = client.post(url, content=body, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+    except httpx.HTTPStatusError as e:
+        print(e.response.text[:2000], file=sys.stderr)
+        return e.response.status_code
+    except httpx.HTTPError as e:
+        print(str(e), file=sys.stderr)
+        return 1
 
     if data.get("errors"):
         print(json.dumps(data["errors"], indent=2))
