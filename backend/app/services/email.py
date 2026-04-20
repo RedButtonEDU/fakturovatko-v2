@@ -12,7 +12,6 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from app.agent_debug_log import email_domain, log_event
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -86,11 +85,3 @@ def send_email(
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     service.users().messages().send(userId="me", body={"raw": raw}).execute()
     logger.info("Email sent to %s", to)
-    # #region agent log
-    log_event(
-        "email.py:send_email",
-        "Gmail API send finished",
-        {"h1_sent_to_domain": email_domain(to)},
-        hypothesis_id="H1-email-recipient",
-    )
-    # #endregion
