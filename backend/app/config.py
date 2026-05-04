@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     # CORS (comma-separated; frontend same origin in production when served by FastAPI)
     allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # HTTP security headers (middleware). HSTS only when >0 and request is HTTPS.
+    security_hsts_max_age: int = 0
+    # Comma-separated hosts trusted to set X-Forwarded-Proto (uvicorn ProxyHeadersMiddleware).
+    # Empty = disabled. Behind a single reverse proxy (e.g. Coolify) often: *
+    forwarded_trusted_hosts: str = ""
+
     # Cron (Coolify: CRON_SECRET)
     cron_secret: str = "change-me-in-production"
     # POST /internal/jobs/poll-payments — druhá fáze (kontrola plateb, Ti.to, finální faktura). False = no-op.

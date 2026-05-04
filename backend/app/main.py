@@ -5,10 +5,12 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.config import get_settings
 from app.db import Base, engine, migrate_schema
 from app.routers import api_orders, api_public, health, internal
+from app.security_headers import SecurityHeadersMiddleware
 
 settings = get_settings()
 
@@ -22,6 +24,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    hsts_max_age=settings.security_hsts_max_age,
+)
+_trusted = [h.strip() for h in settings.forwarded_trusted_hosts.split(",") if h.strip()]
+if _trusted:
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted)
 
 app.include_router(health.router)
 app.include_router(api_public.router)
