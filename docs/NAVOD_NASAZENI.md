@@ -35,6 +35,22 @@ Repozitář: [github.com/RedButtonEDU/fakturovatko-v2](https://github.com/RedBut
 - Deploy z **GitHubu** přes **GitHub App** (webhook + přístup k repozitáři).
 - Pravidelný **cron** v Coolify volá interní endpoint pro kontrolu plateb a dokončení flow.
 
+### Veřejné vs. interní rozhraní
+
+| Typ | Příklady | Ochrana |
+|-----|----------|---------|
+| Veřejné API | `GET /api/releases`, `POST /api/orders`, `GET /api/ares/lookup` | Bez session; ARES lookup má rate limit |
+| Health | `GET /health` | Jen `status` (produkce); detail odesílatele jen při `DEBUG=true` |
+| Interní | `POST /internal/jobs/poll-payments`, `GET /internal/opendata-fs` | Hlavička **`X-Cron-Token`** = `CRON_SECRET` |
+| Dokumentace API | `/openapi.json`, `/docs` | **Vypnuto** v produkci (`EXPOSE_OPENAPI` default `false`) |
+
+### Bezpečnostní vrstva aplikace
+
+- Middleware **bezpečnostních hlaviček** (CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`).
+- **HSTS** při `SECURITY_HSTS_MAX_AGE` > 0 a HTTPS (za reverse proxy nastavte `FORWARDED_TRUSTED_HOSTS`, typicky `*` u Coolify).
+- **ARES/RPO lookup** vrací jen pole pro formulář (`company_name`, adresa, `vat_id`) — ne celý surový JSON z registru.
+- Pen-test mitigace (RB-003/004/006): skryté OpenAPI, zredukovaná odpověď lookup, minimální `/health`.
+
 ---
 
 ## 2. GitHub — repozitář a GitHub App
@@ -118,7 +134,13 @@ Nastavte v sekci **Environment Variables** u této služby (hodnoty doplňte vla
 |----------|---------|--------|
 | `DATABASE_URL` | ano | Pro produkci s volume: `sqlite:////data/fakturovatko.sqlite3` |
 | `ALLOWED_ORIGINS` | ano | Jen `https://invoice.exponentialsummit.cz` (jedna hodnota; bez sslip.io, pokud ho nepoužíváte) |
+| `SECURITY_HSTS_MAX_AGE` | doporučeno | `31536000` — HSTS na HTTPS odpovědích |
+| `FORWARDED_TRUSTED_HOSTS` | doporučeno | `*` — za Coolify/Traefik (jinak HSTS nemusí aktivovat) |
+| `EXPOSE_OPENAPI` | ne | Produkce: **nenastavovat** (false). Lokální dev: `true` pro Swagger |
+| `ARES_RATE_LIMIT_PER_MINUTE` | ne | Default **30** požadavků/min/IP na `GET /api/ares/lookup`; `0` = vypnuto |
+| `DEBUG` | ne | Produkce: **false**. `true` = `/health` vrací i `gmail_from_*` |
 | `CRON_SECRET` | ano | Náhodný dlouhý řetězec; **stejná** hodnota jako u scheduled tasku (viz [§8](#8-coolify--scheduled-task-cron)) |
+| `CRON_POLL_PAYMENTS_ENABLED` | ne | Default **false** — cron job jen logicky „skipped“, dokud nezapnete `true` |
 | `TITO_API_KEY` | ano | Token z [id.tito.io](https://id.tito.io) (režim **live**) |
 | `TITO_ACCOUNT_SLUG` | ano | `redbutton` |
 | `TITO_EVENT_SLUG` | ano | `es-2026` |
@@ -206,6 +228,8 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 | Frekvence | např. 2–3× denně (podle potřeby) |
 
 **Důležité:** `CRON_SECRET` musí být v **environment** té služby, aby se `$CRON_SECRET` v příkazu nahradilo. Pokud váš Coolify neexpanduje proměnné, vložte token přímo do hlavičky (méně bezpečné) nebo použijte dokumentaci vaší verze pro „secrets v cronu“.
+
+**Druhá fáze:** endpoint běží jen pokud je `CRON_POLL_PAYMENTS_ENABLED=true` (výchozí v aplikaci **false** — odpověď `skipped`). Pro produkční poll plateb proměnnou zapněte a redeploy.
 
 ---
 
@@ -301,15 +325,41 @@ Propagace DNS může trvat řádově minuty až hodiny.
 
 ## 14. Ověření po nasazení
 
-1. `GET https://invoice.exponentialsummit.cz/health` → `{"status":"ok"}` (bez úniku konfigurace). Lokálně s `DEBUG=true` navíc `gmail_from_*` pro smoke test odesílatele.
+### Základní funkce
+
+1. `GET https://invoice.exponentialsummit.cz/health` → `{"status":"ok"}` (bez `gmail_from_*`). Lokálně s `DEBUG=true` navíc odesílatel pro smoke test.
 
 2. Otevřete `https://invoice.exponentialsummit.cz` — načte se formulář.
 
-3. (Volitelně) Otestujte `GET /api/releases` — vyžaduje platný `TITO_API_KEY` na serveru.
+3. (Volitelně) `GET /api/releases` — vyžaduje platný `TITO_API_KEY`.
 
 4. Odeslání testovací objednávky (s nakonfigurovaným Gmailem).
 
-5. V Coolify **Scheduled Task** spusťte ručně „Run now“ a zkontrolujte logy (job `poll-payments`).
+5. Cron: po `CRON_POLL_PAYMENTS_ENABLED=true` spusťte v Coolify **Scheduled Task** „Run now“ a zkontrolujte logy (`poll-payments`).
+
+### Bezpečnost (doporučený retest po deployi)
+
+```bash
+# Health bez úniku konfigurace
+curl -s https://invoice.exponentialsummit.cz/health
+
+# OpenAPI vypnuto
+curl -s -o /dev/null -w "%{http_code}\n" https://invoice.exponentialsummit.cz/openapi.json
+# očekáváno: 404
+
+# ARES — jen pole pro formulář, bez klíče "raw"
+curl -s 'https://invoice.exponentialsummit.cz/api/ares/lookup?ico=27074358&country=CZ' | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'raw' not in d; print(sorted(d.keys()))"
+
+# Security headers (ukázka)
+curl -sI https://invoice.exponentialsummit.cz/ | grep -iE 'strict-transport|content-security|x-frame|x-content-type'
+```
+
+Interní endpoint bez tokenu musí vracet **401**:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://invoice.exponentialsummit.cz/internal/jobs/poll-payments
+# očekáváno: 401
+```
 
 ---
 
@@ -323,15 +373,21 @@ Propagace DNS může trvat řádově minuty až hodiny.
 | Prázdná databáze po deployi | Chybí volume na `/data` nebo špatné `DATABASE_URL` |
 | Cron nevolá job | Špatný `X-Cron-Token`, špatný port (8000), příkaz na jiném kontejneru |
 | 422 / chyba Pipedrive u pole 2026 | V Pipedrive UI přidat option **2026** do set pole H@W Live! |
+| `/openapi.json` stále 200 | Nepřidávejte `EXPOSE_OPENAPI=true` v produkci; redeploy po změně env |
+| Chybí HSTS v hlavičkách | Nastavte `SECURITY_HSTS_MAX_AGE` a `FORWARDED_TRUSTED_HOSTS=*` |
+| Lookup IČO → 429 | Rate limit (`ARES_RATE_LIMIT_PER_MINUTE`); počkejte minutu nebo snižte zátěž testů |
+| Cron nic nedělá | `CRON_POLL_PAYMENTS_ENABLED=true` a platný `CRON_SECRET` v hlavičce |
+| Push na GitHub 403 | Push pod účtem s přístupem k **RedButtonEDU** (`gh auth switch --user RedButtonEDU`) |
 
 ---
 
 ## Související soubory v repu
 
-- [`README.md`](../README.md) — lokální vývoj, Docker příkaz
+- [`README.md`](../README.md) — přehled stacku, API, lokální vývoj
 - [`env.example`](../env.example) — šablona proměnných
-- [`docs/COOLIFY.md`](COOLIFY.md) — stručná poznámka k Coolify a cronu
+- [`docs/COOLIFY.md`](COOLIFY.md) — checklist Coolify + bezpečnost
+- [`frontend/README.md`](../frontend/README.md) — Vite dev a proxy
 
 ---
 
-*Poslední úprava: sladěno s aplikací Fakturovatko v2 (FastAPI + React, jeden Docker image).*
+*Poslední úprava: 2026-05-22 — OpenAPI vypnuto v produkci, ARES rate limit, security headers, minimální `/health`.*
