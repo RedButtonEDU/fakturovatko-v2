@@ -14,7 +14,16 @@ from app.security_headers import SecurityHeadersMiddleware
 
 settings = get_settings()
 
-app = FastAPI(title=settings.app_name, debug=settings.debug)
+_openapi_url = "/openapi.json" if settings.expose_openapi else None
+_docs_url = "/docs" if settings.expose_openapi else None
+
+app = FastAPI(
+    title=settings.app_name,
+    debug=settings.debug,
+    openapi_url=_openapi_url,
+    docs_url=_docs_url,
+    redoc_url=None,
+)
 
 origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 app.add_middleware(

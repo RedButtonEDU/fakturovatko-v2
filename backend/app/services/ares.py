@@ -67,7 +67,6 @@ def _parse_subject(subj: dict[str, Any]) -> dict[str, Any]:
         "city": city,
         "zip": _psc_str(ad),
         "vat_id": str(dic).strip() if dic else None,
-        "raw": subj,
     }
 
 

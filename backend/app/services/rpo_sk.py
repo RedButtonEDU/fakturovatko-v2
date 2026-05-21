@@ -83,7 +83,6 @@ def _parse_result(row: dict[str, Any]) -> dict[str, Any]:
         "city": city,
         "zip": zip_s,
         "vat_id": None,
-        "raw": row,
     }
 
 

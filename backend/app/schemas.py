@@ -40,3 +40,11 @@ class ReleaseOut(BaseModel):
 class CountryOut(BaseModel):
     code: str
     name_en: str
+
+
+class AresLookupOut(BaseModel):
+    company_name: str = ""
+    street: str = ""
+    city: str = ""
+    zip: str = ""
+    vat_id: Optional[str] = None

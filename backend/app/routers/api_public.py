@@ -4,11 +4,12 @@ import logging
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.config import get_settings
 from app.countries import get_country_options
-from app.schemas import CountryOut, ReleaseOut
+from app.rate_limit import enforce_per_minute
+from app.schemas import AresLookupOut, CountryOut, ReleaseOut
 from app.services import tito as tito_svc
 from app.services.ares import lookup_ico
 
@@ -80,8 +81,21 @@ def list_countries():
     return [CountryOut(**c) for c in get_country_options()]
 
 
-@router.get("/ares/lookup")
-async def ares_lookup(ico: str = Query(..., min_length=3), country: str = Query("CZ", min_length=2, max_length=2)):
+def _ares_rate_limit(request: Request) -> None:
+    enforce_per_minute(
+        request,
+        limit=get_settings().ares_rate_limit_per_minute,
+        scope="ares-lookup",
+    )
+
+
+@router.get("/ares/lookup", response_model=AresLookupOut)
+async def ares_lookup(
+    request: Request,
+    ico: str = Query(..., min_length=3),
+    country: str = Query("CZ", min_length=2, max_length=2),
+    _rate: None = Depends(_ares_rate_limit),
+):
     try:
         data = await lookup_ico(ico, country)
     except httpx.TimeoutException:

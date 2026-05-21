@@ -301,7 +301,7 @@ Propagace DNS může trvat řádově minuty až hodiny.
 
 ## 14. Ověření po nasazení
 
-1. `GET https://invoice.exponentialsummit.cz/health` → odpověď obsahuje `status`, `gmail_from_email`, `gmail_from_name` (výchozí odesílatel z konfigurace).
+1. `GET https://invoice.exponentialsummit.cz/health` → `{"status":"ok"}` (bez úniku konfigurace). Lokálně s `DEBUG=true` navíc `gmail_from_*` pro smoke test odesílatele.
 
 2. Otevřete `https://invoice.exponentialsummit.cz` — načte se formulář.
 

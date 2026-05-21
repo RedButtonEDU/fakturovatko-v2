@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # App
     app_name: str = "Fakturovatko"
     debug: bool = False
+    # OpenAPI / Swagger — default off (black-box: hide internal paths on production).
+    expose_openapi: bool = False
+    # GET /api/ares/lookup — requests per client IP per minute (0 = disabled).
+    ares_rate_limit_per_minute: int = 30
     database_url: str = "sqlite:///./data/fakturovatko.sqlite3"
     sqlite_path: Path = Path("data/fakturovatko.sqlite3")
 
