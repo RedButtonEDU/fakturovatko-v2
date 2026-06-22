@@ -128,6 +128,7 @@ class Settings(BaseSettings):
     # Custom field keys (Pipedrive)
     pipedrive_org_field_ico: str = "dc8020a215fd0bb6280841a61ebd3d18861665b6"
     pipedrive_org_field_dic: str = "58817b04de78bb09468b1cb7ee4340a6f471d035"
+    # Person field „Konference“ (dříve H@W Live!) — API key beze změny
     pipedrive_person_field_hw_live: str = "3166f6b49ff1259e1ace35bfb691f07a0e86effd"
 
     # VAT (Czech default for CZK tickets)

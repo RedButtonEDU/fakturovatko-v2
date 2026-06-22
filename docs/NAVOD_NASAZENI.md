@@ -307,7 +307,7 @@ Po selhání má objednávka stav **`error`** a job ji znovu nevezme. Po opravě
 
 1. V **Pipedrive → Settings → Personal preferences → API** (nebo Company settings) zkopírujte token → `PIPEDRIVE_API_TOKEN` (uživatel s právy na úpravu osob a organizací).
 
-2. U vlastního pole osoby **„H@W Live!“** (`3166f6b49ff1259e1ace35bfb691f07a0e86effd`) přidejte v UI volbu **2027**, pokud tam ještě není (jinak zápis přes API selže).
+2. U vlastního pole osoby **„Konference“** (dříve H@W Live!, API key `3166f6b49ff1259e1ace35bfb691f07a0e86effd`) musí být volba **2027** — pro ES 2027 je doplněna. U dalšího ročníku přidejte novou option v Pipedrive UI (jinak zápis přes API selže).
 
 3. Párování v aplikaci: **osoba podle e-mailu**, **organizace podle IČ** (případně DIČ) — odpovídá polím v kódu/configu.
 
@@ -372,7 +372,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST https://invoice.exponentialsumm
 | E-mail se neodesílá / špatný odesílatel | `GOOGLE_*`, `GMAIL_REFRESH_TOKEN`, scope `gmail.send`; `GMAIL_FROM_NAME` / `GMAIL_FROM_EMAIL` (výchozí Tým Red Button / hello@); OAuth účet musí odpovídat odesílání z této adresy; `ALLFRED_UI_EMAIL` není odesílatel Gmailu |
 | Prázdná databáze po deployi | Chybí volume na `/data` nebo špatné `DATABASE_URL` |
 | Cron nevolá job | Špatný `X-Cron-Token`, špatný port (8000), příkaz na jiném kontejneru |
-| 422 / chyba Pipedrive u pole 2027 | V Pipedrive UI přidat option **2027** do set pole H@W Live! |
+| 422 / chyba Pipedrive u pole Konference | V Pipedrive UI přidat chybějící option (např. **2027**) do set pole **Konference** |
 | `/openapi.json` stále 200 | Nepřidávejte `EXPOSE_OPENAPI=true` v produkci; redeploy po změně env |
 | Chybí HSTS v hlavičkách | Nastavte `SECURITY_HSTS_MAX_AGE` a `FORWARDED_TRUSTED_HOSTS=*` |
 | Lookup IČO → 429 | Rate limit (`ARES_RATE_LIMIT_PER_MINUTE`); počkejte minutu nebo snižte zátěž testů |

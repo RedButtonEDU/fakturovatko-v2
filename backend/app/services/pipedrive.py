@@ -117,7 +117,8 @@ async def create_person(
     return int(data["data"]["id"])
 
 
-async def update_person_hw_live(person_id: int, year_option: str = "2027") -> None:
+async def update_person_konference(person_id: int, year_option: str = "2027") -> None:
+    """Nastaví set pole osoby „Konference“ (Pipedrive API key beze změny)."""
     s = get_settings()
     await _put(
         f"persons/{person_id}",
@@ -157,5 +158,5 @@ async def ensure_person_and_org(
     elif org_id:
         await _put(f"persons/{person_id}", {"org_id": org_id})
 
-    await update_person_hw_live(person_id)
+    await update_person_konference(person_id)
     return person_id, org_id
