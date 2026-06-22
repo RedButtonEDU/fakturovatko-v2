@@ -400,7 +400,7 @@ def build_quick_setup_input(
         "vat_rate": s.allfred_invoice_vat_rate,
         "invoice_items": [
             {
-                "description": f"{order.tito_release_title} — Exponential Summit 2026",
+                "description": f"{order.tito_release_title} — Exponential Summit 2027",
                 "unit_price": uh,
                 "quantity": float(order.ticket_quantity),
             }
@@ -424,7 +424,7 @@ def build_quick_setup_input(
             project_payload = reused
         else:
             project_payload = {
-                "title": f"Exponential Summit 2026 — {order.tito_release_title} ({order.public_id[:8]})",
+                "title": f"Exponential Summit 2027 — {order.tito_release_title} ({order.public_id[:8]})",
                 "billable": True,
                 "project_manager_id": s.allfred_project_manager_id,
                 "team_id": s.allfred_team_id,
@@ -432,7 +432,7 @@ def build_quick_setup_input(
             }
     else:
         project_payload = {
-            "title": f"Exponential Summit 2026 — {order.tito_release_title} ({order.public_id[:8]})",
+            "title": f"Exponential Summit 2027 — {order.tito_release_title} ({order.public_id[:8]})",
             "billable": True,
             "project_manager_id": s.allfred_project_manager_id,
             "team_id": s.allfred_team_id,

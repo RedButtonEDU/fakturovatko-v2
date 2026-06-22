@@ -1,8 +1,8 @@
-Subject: Exponential Summit 2026 – faktura a slevový kód
+Subject: Exponential Summit 2027 – faktura a slevový kód
 
 Dobrý den,
 
-v příloze je finální faktura k vaší objednávce vstupenek na Exponential Summit 2026
+v příloze je finální faktura k vaší objednávce vstupenek na Exponential Summit 2027
 
 Slevový kód na Ti.to: $discount_code - přes něj si můžete Vaše vstupenky objednat a poté zaregistrovat účast.
 

@@ -1,6 +1,6 @@
 # Fakturovatko v2 — frontend
 
-React SPA pro objednávkový formulář Exponential Summit 2026. V produkci se servíruje jako statika z FastAPI (`backend/app/static` po `npm run build` v Dockeru).
+React SPA pro objednávkový formulář Exponential Summit 2027. V produkci se servíruje jako statika z FastAPI (`backend/app/static` po `npm run build` v Dockeru).
 
 ## Lokální vývoj
 

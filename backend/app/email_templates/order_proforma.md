@@ -2,7 +2,7 @@ Subject: Exponential Summit – zálohová faktura (proforma)
 
 Dobrý den,
 
-děkujeme za objednávku. V příloze je zálohová faktura ke vstupenkám na Exponential Summit 2026.
+děkujeme za objednávku. V příloze je zálohová faktura ke vstupenkám na Exponential Summit 2027.
 
 Po jejím zaplacení obdržíte konečnou fakturu a voucher na registraci vstupenek.
 

@@ -34,7 +34,7 @@ export function orderCountriesForDisplay(countries: Country[], lang: Lang): Coun
 const STRINGS: Record<Lang, Record<string, string>> = {
   cs: {
     title: 'Objednávka vstupenek',
-    subtitle: 'Exponential Summit 2026 — fakturace přes Red Button EDU',
+    subtitle: 'Exponential Summit 2027 — fakturace přes Red Button EDU',
     fullName: 'Jméno a příjmení',
     email: 'E-mail',
     ticket: 'Typ vstupenky',
@@ -67,7 +67,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
   },
   en: {
     title: 'Ticket order',
-    subtitle: 'Exponential Summit 2026 — invoicing via Red Button EDU',
+    subtitle: 'Exponential Summit 2027 — invoicing via Red Button EDU',
     fullName: 'Full name',
     email: 'E-mail',
     ticket: 'Ticket type',

@@ -117,7 +117,7 @@ async def create_person(
     return int(data["data"]["id"])
 
 
-async def update_person_hw_live(person_id: int, year_option: str = "2026") -> None:
+async def update_person_hw_live(person_id: int, year_option: str = "2027") -> None:
     s = get_settings()
     await _put(
         f"persons/{person_id}",
