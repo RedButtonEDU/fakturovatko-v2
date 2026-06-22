@@ -8,6 +8,6 @@ Po jejím zaplacení obdržíte konečnou fakturu a voucher na registraci vstupe
 
 V případě, dotazů či změn na faktuře prosím kontaktujte Dominika Holíčka: dominik@redbuttonedu.cz.
 
-Těšíme se na setkání s Vámi
+Těšíme se v únoru.
 
 Tým Red Button EDU
