@@ -46,6 +46,34 @@ async def fetch_releases(account: str, event_slug: str, api_key: str) -> list[di
     return out
 
 
+def release_order_limits(rel: dict[str, Any]) -> dict[str, Optional[int]]:
+    """Ti.to release: zbývající kusy (jen při limitu quantity) a min/max na objednávku."""
+    remaining: Optional[int] = None
+    q = rel.get("quantity")
+    if q is not None and q != "":
+        try:
+            total = int(q)
+            sold = int(rel.get("tickets_count") or 0)
+            remaining = max(0, total - sold)
+        except (TypeError, ValueError):
+            remaining = None
+
+    def _pos(v: Any) -> Optional[int]:
+        if v is None or v == "":
+            return None
+        try:
+            n = int(v)
+            return n if n > 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "quantity_remaining": remaining,
+        "min_per_order": _pos(rel.get("min_tickets_per_person")),
+        "max_per_order": _pos(rel.get("max_tickets_per_person")),
+    }
+
+
 async def fetch_event(account: str, event_slug: str, api_key: str) -> dict[str, Any]:
     url = f"{TITO_BASE}/{account}/{event_slug}"
     params = {"version": "3.1"}

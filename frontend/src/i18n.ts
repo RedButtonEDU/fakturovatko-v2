@@ -64,6 +64,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     lookupTimeout:
       'Načtení údajů vypršelo — zkuste to znovu za chvíli nebo vyplňte údaje ručně.',
     required: 'Vyplňte povinná pole.',
+    ticketsRemaining: 'zbývá {n}',
+    orderQtyHintMin: 'Minimálně {n} ks na objednávku.',
+    orderQtyHintMax: 'Maximálně {n} ks na objednávku.',
+    orderQtyHintRange: 'Na objednávku: {min}–{max} ks.',
   },
   en: {
     title: 'Ticket order',
@@ -97,6 +101,10 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     lookupTimeout:
       'Loading company details timed out — try again shortly or enter the details manually.',
     required: 'Please fill in required fields.',
+    ticketsRemaining: '{n} left',
+    orderQtyHintMin: 'Minimum {n} tickets per order.',
+    orderQtyHintMax: 'Maximum {n} tickets per order.',
+    orderQtyHintRange: 'Per order: {min}–{max} tickets.',
   },
 }
 
@@ -152,4 +160,12 @@ export function applyLangToBrowserUrl(lang: Lang): void {
 
 export function t(lang: Lang, key: keyof typeof STRINGS.cs): string {
   return STRINGS[lang][key] ?? key
+}
+
+export function tf(lang: Lang, key: keyof typeof STRINGS.cs, vars: Record<string, string | number>): string {
+  let s = t(lang, key)
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.replace(`{${k}}`, String(v))
+  }
+  return s
 }

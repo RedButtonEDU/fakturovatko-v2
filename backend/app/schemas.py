@@ -35,6 +35,9 @@ class ReleaseOut(BaseModel):
     price: Optional[float] = None
     state: Optional[str] = None
     secret: Optional[bool] = None
+    quantity_remaining: Optional[int] = None
+    min_per_order: Optional[int] = None
+    max_per_order: Optional[int] = None
 
 
 class CountryOut(BaseModel):

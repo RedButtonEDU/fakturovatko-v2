@@ -16,8 +16,36 @@ import {
   initialLang,
   orderCountriesForDisplay,
   t,
+  tf,
   type Lang,
 } from './i18n'
+
+const FORM_QTY_HARD_MAX = 50
+
+function releaseQtyBounds(release: Release | null): { min: number; max: number } {
+  let min = 1
+  let max = FORM_QTY_HARD_MAX
+  if (!release) return { min, max }
+  if (release.min_per_order != null) min = Math.max(1, release.min_per_order)
+  if (release.max_per_order != null) max = Math.min(max, release.max_per_order)
+  if (release.quantity_remaining != null) max = Math.min(max, release.quantity_remaining)
+  if (min > max) min = max
+  return { min, max }
+}
+
+function formatReleaseRemaining(release: Release, lang: Lang): string {
+  if (release.quantity_remaining == null) return ''
+  return ` — ${tf(lang, 'ticketsRemaining', { n: release.quantity_remaining })}`
+}
+
+function formatOrderQtyHint(release: Release | null, lang: Lang): string | null {
+  if (!release) return null
+  const { min_per_order: min, max_per_order: max } = release
+  if (min != null && max != null) return tf(lang, 'orderQtyHintRange', { min, max })
+  if (min != null) return tf(lang, 'orderQtyHintMin', { n: min })
+  if (max != null) return tf(lang, 'orderQtyHintMax', { n: max })
+  return null
+}
 
 const VAT = 0.21
 
@@ -95,11 +123,24 @@ export default function App() {
     [releases, releaseId],
   )
 
+  const qtyBounds = useMemo(() => releaseQtyBounds(selectedRelease), [selectedRelease])
+
+  useEffect(() => {
+    if (!selectedRelease) return
+    const { min, max } = releaseQtyBounds(selectedRelease)
+    setQtyInput((prev) => {
+      const n = parseInt(prev, 10)
+      const current = prev === '' || Number.isNaN(n) ? min : n
+      const clamped = Math.min(max, Math.max(min, current))
+      return String(clamped)
+    })
+  }, [releaseId, selectedRelease])
+
   const quantityForTotals = useMemo(() => {
     const n = parseInt(qtyInput, 10)
     if (qtyInput === '' || Number.isNaN(n)) return 0
-    return Math.min(50, Math.max(1, n))
-  }, [qtyInput])
+    return Math.min(qtyBounds.max, Math.max(qtyBounds.min, n))
+  }, [qtyInput, qtyBounds])
 
   const linePrices = useMemo(() => {
     if (!eventMeta || !selectedRelease) return null
@@ -111,6 +152,11 @@ export default function App() {
       totalInc: u.inc * quantityForTotals,
     }
   }, [eventMeta, selectedRelease, quantityForTotals])
+
+  const orderQtyHint = useMemo(
+    () => formatOrderQtyHint(selectedRelease, lang),
+    [selectedRelease, lang],
+  )
 
   const countriesForUi = useMemo(() => orderCountriesForDisplay(countries, lang), [countries, lang])
 
@@ -164,8 +210,9 @@ export default function App() {
       }
     }
     const n = parseInt(qtyInput, 10)
+    const { min, max } = releaseQtyBounds(selectedRelease)
     const ticketQty =
-      qtyInput === '' || Number.isNaN(n) || n < 1 ? 1 : Math.min(50, n)
+      qtyInput === '' || Number.isNaN(n) ? min : Math.min(max, Math.max(min, n))
 
     setLoading(true)
     try {
@@ -268,9 +315,15 @@ export default function App() {
                           currency,
                         )} ${t(lang, 'priceWithVat')}`
                       : ''}
+                    {formatReleaseRemaining(r, lang)}
                   </option>
                 ))}
               </select>
+              {selectedRelease?.quantity_remaining != null && (
+                <p className="field-hint">
+                  {tf(lang, 'ticketsRemaining', { n: selectedRelease.quantity_remaining })}
+                </p>
+              )}
             </label>
 
             <label>
@@ -289,14 +342,16 @@ export default function App() {
                   }
                 }}
                 onBlur={() => {
+                  const { min, max } = releaseQtyBounds(selectedRelease)
                   const n = parseInt(qtyInput, 10)
-                  if (qtyInput === '' || Number.isNaN(n) || n < 1) {
-                    setQtyInput('1')
+                  if (qtyInput === '' || Number.isNaN(n) || n < min) {
+                    setQtyInput(String(min))
                   } else {
-                    setQtyInput(String(Math.min(50, n)))
+                    setQtyInput(String(Math.min(max, n)))
                   }
                 }}
               />
+              {orderQtyHint && <p className="field-hint">{orderQtyHint}</p>}
             </label>
 
             {linePrices && (

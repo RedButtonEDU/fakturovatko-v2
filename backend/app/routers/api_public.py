@@ -63,6 +63,7 @@ async def list_releases():
         except (TypeError, ValueError):
             continue
         pu = _release_unit_price(rel)
+        limits = tito_svc.release_order_limits(rel)
         out.append(
             ReleaseOut(
                 id=rid,
@@ -71,6 +72,9 @@ async def list_releases():
                 price=pu,
                 state=str(rel.get("state_name") or rel.get("state") or ""),
                 secret=bool(rel.get("secret")) if rel.get("secret") is not None else False,
+                quantity_remaining=limits["quantity_remaining"],
+                min_per_order=limits["min_per_order"],
+                max_per_order=limits["max_per_order"],
             )
         )
     return out

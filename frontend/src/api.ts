@@ -7,6 +7,9 @@ export type Release = {
   price: number | null
   state: string | null
   secret: boolean | null
+  quantity_remaining: number | null
+  min_per_order: number | null
+  max_per_order: number | null
 }
 
 export type Country = { code: string; name_en: string }
