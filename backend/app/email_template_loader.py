@@ -43,14 +43,27 @@ def _load_parsed(name: str) -> tuple[str, str]:
 
 
 def plain_body_to_html(plain: str) -> str:
-    """Z plain textu udělá jednoduché HTML; ``dominik@redbuttonedu.cz`` → klikací mailto odkaz."""
+    """Z plain textu HTML v barvách Exponential Summit v3 (e-mail klienty)."""
     esc = html_module.escape(plain)
-    link = f'<a href="mailto:{_MAILTO_EMAIL}">{_MAILTO_EMAIL}</a>'
+    link = f'<a href="mailto:{_MAILTO_EMAIL}" style="color:#fe1a3f;text-decoration:none;">{_MAILTO_EMAIL}</a>'
     esc = esc.replace(_MAILTO_EMAIL, link)
     inner = esc.replace("\n", "<br>\n")
     return (
-        '<div style="font-family: sans-serif; font-size: 14px; line-height: 1.45; color: #222;">'
-        f"{inner}</div>"
+        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        '<body style="margin:0;padding:0;background:#1a1a1a;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#1a1a1a;padding:32px 16px;">'
+        '<tr><td align="center">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="max-width:560px;background:#272727;border:1px solid rgba(255,255,255,0.1);'
+        'border-radius:4px;border-top:3px solid #fe1a3f;">'
+        '<tr><td style="padding:28px 24px;font-family:Rubik,Arial,sans-serif;'
+        'font-size:15px;line-height:1.55;color:#babbbd;">'
+        f"{inner}"
+        "</td></tr></table>"
+        '<p style="margin:24px 0 0;font-family:Rubik,Arial,sans-serif;font-size:12px;'
+        'color:#7f7f7f;text-align:center;">Red Button EDU · Exponential Summit</p>'
+        "</td></tr></table></body></html>"
     )
 
 

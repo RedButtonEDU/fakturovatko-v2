@@ -133,9 +133,30 @@ export function langFromUrl(): Lang | null {
   }
 }
 
-/** Pořadí: URL → prohlížeč */
+/** Sjednocení s exponentialsummit.cz/v3 — jazyk z referreru (např. /v3/en/). */
+export function langFromReferrer(): Lang | null {
+  if (typeof document === 'undefined' || !document.referrer) return null
+  try {
+    const u = new URL(document.referrer)
+    if (!u.hostname.endsWith('exponentialsummit.cz')) return null
+    const path = u.pathname.toLowerCase()
+    if (path.includes('/en') || path.startsWith('/en')) return 'en'
+    return 'cs'
+  } catch {
+    return null
+  }
+}
+
+/** Pořadí: URL → referrer (v3) → prohlížeč */
 export function initialLang(): Lang {
-  return langFromUrl() ?? detectLang()
+  return langFromUrl() ?? langFromReferrer() ?? detectLang()
+}
+
+/** Odkaz na marketing web v3 ve stejném jazyce. */
+export function summitHomeUrl(lang: Lang): string {
+  return lang === 'en'
+    ? 'https://www.exponentialsummit.cz/v3/en/'
+    : 'https://www.exponentialsummit.cz/v3/'
 }
 
 /**

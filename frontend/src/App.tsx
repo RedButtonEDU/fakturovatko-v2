@@ -15,6 +15,7 @@ import {
   countryDisplayName,
   initialLang,
   orderCountriesForDisplay,
+  summitHomeUrl,
   t,
   tf,
   type Lang,
@@ -79,7 +80,8 @@ export default function App() {
   const [eventMeta, setEventMeta] = useState<{ show_prices_ex_tax: boolean; currency: string } | null>(
     null,
   )
-  const [loading, setLoading] = useState(true)
+  const [bootLoading, setBootLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
   const [fullName, setFullName] = useState('')
@@ -110,7 +112,7 @@ export default function App() {
       } catch {
         setErr('Nelze načíst data. Zkuste to prosím znovu.')
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setBootLoading(false)
       }
     })()
     return () => {
@@ -214,7 +216,7 @@ export default function App() {
     const ticketQty =
       qtyInput === '' || Number.isNaN(n) ? min : Math.min(max, Math.max(min, n))
 
-    setLoading(true)
+    setSubmitting(true)
     try {
       await createOrder({
         full_name: fullName,
@@ -240,47 +242,50 @@ export default function App() {
     } catch (ex: unknown) {
       setErr(String(ex instanceof Error ? ex.message : ex))
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
   const currency = eventMeta?.currency ?? 'CZK'
 
+  function switchLang(next: Lang) {
+    setLang(next)
+    applyLangToBrowserUrl(next)
+  }
+
+  const otherLang: Lang = lang === 'cs' ? 'en' : 'cs'
+
   return (
     <div className="page">
-      <header className="hero">
-        <div className="hero-inner">
-          <p className="eyebrow">Exponential Summit</p>
-          <h1>{t(lang, 'title')}</h1>
-          <p className="lead">{t(lang, 'subtitle')}</p>
-          <div className="lang-switch">
-            <span>{t(lang, 'lang')}:</span>
-            <button
-              type="button"
-              className={lang === 'cs' ? 'active' : ''}
-              onClick={() => {
-                setLang('cs')
-                applyLangToBrowserUrl('cs')
-              }}
-            >
-              Čeština
-            </button>
-            <button
-              type="button"
-              className={lang === 'en' ? 'active' : ''}
-              onClick={() => {
-                setLang('en')
-                applyLangToBrowserUrl('en')
-              }}
-            >
-              English
-            </button>
-          </div>
+      <header className="site-header">
+        <a className="logo" href={summitHomeUrl(lang)} aria-label="Exponential Summit">
+          <img src="/assets/exponential-summit-logo.svg" alt="Exponential Summit by Red Button" />
+        </a>
+        <div className="header-right">
+          <button
+            type="button"
+            className="lang-switch"
+            onClick={() => switchLang(otherLang)}
+            aria-label={otherLang === 'en' ? 'English' : 'Čeština'}
+          >
+            <span className="lang-flag">{lang === 'cs' ? '🇨🇿' : '🇬🇧'}</span>
+            <span className="lang-arrow">▼</span>
+          </button>
         </div>
       </header>
 
-      <main className="shell">
-        {done ? (
+      <main className="order-main">
+        <div className="page-intro">
+          <p className="page-eyebrow">Exponential Summit</p>
+          <h1 className="page-title">{t(lang, 'title')}</h1>
+          <p className="page-lead">{t(lang, 'subtitle')}</p>
+        </div>
+
+        {bootLoading ? (
+          <div className="page-loading" aria-live="polite">
+            …
+          </div>
+        ) : done ? (
           <div className="card success">
             <div className="success-message">{t(lang, 'successMessage')}</div>
           </div>
@@ -446,7 +451,12 @@ export default function App() {
                       inputMode="numeric"
                       autoComplete="off"
                     />
-                    <button type="button" className="secondary" onClick={onLookupIco} disabled={icoLoading}>
+                    <button
+                      type="button"
+                      className="btn-pill btn-pill--outline"
+                      onClick={onLookupIco}
+                      disabled={icoLoading}
+                    >
                       {icoLoading ? '…' : t(lang, country === 'SK' ? 'lookupRpo' : 'lookup')}
                     </button>
                   </div>
@@ -495,15 +505,17 @@ export default function App() {
               </>
             )}
 
-            <button type="submit" className="primary" disabled={loading}>
-              {loading ? '…' : t(lang, 'submit')}
+            <button type="submit" className="hero-btn hero-btn--primary hero-btn--block" disabled={submitting}>
+              <span className="hero-btn-label">{submitting ? '…' : t(lang, 'submit')}</span>
             </button>
           </form>
         )}
       </main>
 
-      <footer className="footer">
-        <span>Red Button EDU · invoice.exponentialsummit.cz</span>
+      <footer className="site-footer">
+        <a href={summitHomeUrl(lang)}>exponentialsummit.cz</a>
+        {' · '}
+        <span>Red Button EDU</span>
       </footer>
     </div>
   )
