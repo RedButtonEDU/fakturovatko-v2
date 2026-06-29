@@ -453,7 +453,7 @@ export default function App() {
                     />
                     <button
                       type="button"
-                      className="btn-pill btn-pill--outline"
+                      className="btn-pill btn-pill--secondary"
                       onClick={onLookupIco}
                       disabled={icoLoading}
                     >

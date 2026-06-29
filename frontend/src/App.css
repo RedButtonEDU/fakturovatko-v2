@@ -1,8 +1,12 @@
 /* Exponential Summit v3 design system — objednávkový formulář */
 
 .page {
-  --brand-red: #fe1a3f;
-  --brand-wine: #a11834;
+  /* Figma: brand/accent, brand/primary + v3 style.css */
+  --brand-accent: #fe1a3f;
+  --brand-primary: #a11834;
+  --brand-red: var(--brand-accent);
+  --brand-wine: var(--brand-primary);
+  --brand-grey: #b0b2b6;
   --ink-0: rgb(13, 13, 13);
   --ink-1: rgb(26, 26, 26);
   --ink-2: rgb(39, 39, 39);
@@ -245,7 +249,25 @@
 .hero-btn--primary {
   min-height: 48px;
   width: 100%;
-  background-image: url('/assets/hero-btn-primary.svg');
+  filter: drop-shadow(0 0 22px rgba(0, 0, 0, 0.85));
+}
+
+.hero-btn--primary::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -24px;
+  right: -24px;
+  background-image: url('/assets/btn-frame.svg');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-btn--primary:hover:not(:disabled) {
+  filter: drop-shadow(0 0 32px rgba(0, 0, 0, 1)) brightness(1.05);
 }
 
 .hero-btn--block {
@@ -264,7 +286,7 @@
   padding: 0 1rem;
 }
 
-.hero-btn:hover:not(:disabled) {
+.hero-btn:hover:not(:disabled):not(.hero-btn--primary) {
   transform: translateY(-1px);
 }
 
@@ -309,15 +331,13 @@
   cursor: not-allowed;
 }
 
-.btn-pill--outline {
-  background: transparent;
-  border: 2px solid var(--accent);
-  color: var(--accent);
+.btn-pill--secondary {
+  background: var(--brand-wine);
+  color: var(--white);
 }
 
-.btn-pill--outline:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--white);
+.btn-pill--secondary:hover:not(:disabled) {
+  background: #8a142c;
 }
 
 .address-block {

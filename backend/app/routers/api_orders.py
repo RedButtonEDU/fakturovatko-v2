@@ -15,6 +15,7 @@ from app.schemas import OrderCreate, OrderOut
 from app.email_template_loader import render_order_proforma
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
+from app.services import tito as tito_svc
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +52,23 @@ def _validate_payload(body: OrderCreate) -> None:
             raise HTTPException(422, "address_street, address_city, address_zip are required")
 
 
+async def _assert_release_available(release_id: int, release_slug: str) -> None:
+    s = get_settings()
+    if not s.tito_api_key:
+        raise HTTPException(503, "TITO_API_KEY not configured")
+    raw = await tito_svc.fetch_releases(s.tito_account_slug, s.tito_event_slug, s.tito_api_key)
+    match = next((r for r in raw if int(r.get("id") or 0) == release_id), None)
+    if match is None:
+        raise HTTPException(422, "Selected ticket type is not available for sale")
+    slug = str(match.get("slug") or "")
+    if slug and slug != release_slug.strip():
+        raise HTTPException(422, "Selected ticket type is not available for sale")
+
+
 @router.post("/orders", response_model=OrderOut)
 async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
     _validate_payload(body)
+    await _assert_release_available(body.tito_release_id, body.tito_release_slug)
     s = get_settings()
     if not allfred_svc.quick_setup_ready():
         raise HTTPException(

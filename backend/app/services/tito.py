@@ -3,6 +3,7 @@
 import secrets
 import string
 import unicodedata
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import httpx
@@ -17,6 +18,48 @@ def _headers(api_key: str) -> dict[str, str]:
         "Accept": "application/json",
         "Authorization": f"Token token={api_key}",
     }
+
+
+def _parse_tito_datetime(value: Any) -> Optional[datetime]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        if text.endswith("Z"):
+            return datetime.fromisoformat(text.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(text)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def release_is_available(rel: dict[str, Any], *, now: Optional[datetime] = None) -> bool:
+    """
+    Ti.to může vrátit state_name=on_sale i u release s budoucím start_at (upcoming=true).
+    Pro formulář bereme jen skutečně koupitelné release.
+    """
+    moment = now or datetime.now(timezone.utc)
+
+    if rel.get("upcoming") is True:
+        return False
+    if rel.get("expired") is True:
+        return False
+    if rel.get("sold_out") is True:
+        return False
+
+    start_at = _parse_tito_datetime(rel.get("start_at"))
+    if start_at is not None and start_at > moment:
+        return False
+
+    end_at = _parse_tito_datetime(rel.get("end_at"))
+    if end_at is not None and end_at < moment:
+        return False
+
+    return True
 
 
 async def fetch_releases(account: str, event_slug: str, api_key: str) -> list[dict[str, Any]]:
@@ -41,6 +84,8 @@ async def fetch_releases(account: str, event_slug: str, api_key: str) -> list[di
         if sn == "off_sale":
             continue
         if sn and sn != "on_sale":
+            continue
+        if not release_is_available(rel):
             continue
         out.append(rel)
     return out
