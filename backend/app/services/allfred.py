@@ -27,6 +27,19 @@ query OutgoingProformaInvoices($page: Int!) {
 }
 """
 
+OUTGOING_PROFORMA_QUERY_WITH_CANCELLED = """
+query OutgoingProformaInvoices($page: Int!) {
+  outgoingProformaInvoices(page: $page) {
+    paginatorInfo { hasMorePages currentPage }
+    data {
+      id invoice_no issue_date due_date paid_at cancelled_at
+      projects { id title code }
+      client { id name }
+    }
+  }
+}
+"""
+
 OUTGOING_INVOICES_QUERY = """
 query OutgoingInvoices($page: Int!) {
   outgoingInvoices(page: $page) {
@@ -117,10 +130,21 @@ async def _graphql(query: str, variables: Optional[dict] = None) -> dict[str, An
 
 async def fetch_all_proformas() -> list[dict[str, Any]]:
     """Paginate all outgoing proforma invoices."""
+    for query in (OUTGOING_PROFORMA_QUERY_WITH_CANCELLED, OUTGOING_PROFORMA_QUERY):
+        try:
+            return await _fetch_all_proformas_with_query(query)
+        except RuntimeError as e:
+            if query is OUTGOING_PROFORMA_QUERY:
+                raise
+            logger.warning("Allfred proforma query with cancelled_at failed, retrying without: %s", e)
+    return []
+
+
+async def _fetch_all_proformas_with_query(query: str) -> list[dict[str, Any]]:
     all_rows: list[dict[str, Any]] = []
     page = 1
     while True:
-        data = await _graphql(OUTGOING_PROFORMA_QUERY, {"page": page})
+        data = await _graphql(query, {"page": page})
         block = data.get("outgoingProformaInvoices") or {}
         rows = block.get("data") or []
         all_rows.extend(rows)
@@ -148,6 +172,16 @@ async def fetch_all_invoices() -> list[dict[str, Any]]:
         if page > 500:
             break
     return all_rows
+
+
+def proforma_is_voided(proforma: Optional[dict[str, Any]]) -> bool:
+    """Deleted (None) or cancelled/storno in Allfred."""
+    if proforma is None:
+        return True
+    if proforma.get("cancelled_at"):
+        return True
+    status = str(proforma.get("status") or "").lower()
+    return status in {"cancelled", "canceled", "storno", "void", "voided"}
 
 
 def find_project_ids(proforma: dict) -> list[str]:

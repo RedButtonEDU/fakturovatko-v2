@@ -36,6 +36,20 @@ def migrate_schema() -> None:
             )
         if "ticket_unit_price_czk" not in cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN ticket_unit_price_czk REAL"))
+        tito_cols = {
+            "tito_invoice_release_id": "INTEGER",
+            "tito_invoice_release_slug": "VARCHAR(255)",
+            "tito_public_quantity_before": "INTEGER",
+            "tito_public_quantity_after": "INTEGER",
+            "tito_quantity_held_at": "DATETIME",
+            "tito_quantity_released_at": "DATETIME",
+            "tito_invoice_quantity_before": "INTEGER",
+            "tito_invoice_quantity_after": "INTEGER",
+            "tito_invoice_quantity_patched_at": "DATETIME",
+        }
+        for name, sql_type in tito_cols.items():
+            if name not in cols:
+                conn.execute(text(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}"))
 
 
 def get_db():

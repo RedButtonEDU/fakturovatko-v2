@@ -1,5 +1,7 @@
 """Ti.to Admin API v3 helpers."""
 
+import logging
+import re
 import secrets
 import string
 import unicodedata
@@ -11,6 +13,9 @@ import httpx
 from app.config import get_settings
 
 TITO_BASE = "https://api.tito.io/v3"
+logger = logging.getLogger(__name__)
+
+_INVOICE_SUFFIX_RE = re.compile(r"\s*-?\s*invoice\s*$", re.IGNORECASE)
 
 
 def _headers(api_key: str) -> dict[str, str]:
@@ -62,6 +67,125 @@ def release_is_available(rel: dict[str, Any], *, now: Optional[datetime] = None)
     return True
 
 
+def release_title_is_invoice_clone(rel: dict[str, Any]) -> bool:
+    return "invoice" in str(rel.get("title") or "").lower()
+
+
+def release_base_title(title: str) -> str:
+    return _INVOICE_SUFFIX_RE.sub("", title.strip()).strip()
+
+
+def find_invoice_clone_release(
+    public_release: dict[str, Any],
+    all_releases: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Pair public release with its secret invoice clone (title contains 'invoice')."""
+    public_title = (public_release.get("title") or "").strip()
+    public_id = public_release.get("id")
+    matches: list[dict[str, Any]] = []
+    for rel in all_releases:
+        if rel.get("id") == public_id:
+            continue
+        title = str(rel.get("title") or "")
+        if not release_title_is_invoice_clone(rel):
+            continue
+        if release_base_title(title) == public_title:
+            matches.append(rel)
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected exactly one Ti.to invoice clone for {public_title!r}, found {len(matches)}"
+        )
+    return matches[0]
+
+
+async def fetch_all_releases_raw(account: str, event_slug: str, api_key: str) -> list[dict[str, Any]]:
+    """All releases including secret — for pairing and quantity PATCH."""
+    url = f"{TITO_BASE}/{account}/{event_slug}/releases"
+    params = {"version": "3.1"}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.get(url, headers=_headers(api_key), params=params)
+        r.raise_for_status()
+        data = r.json()
+    releases = data.get("releases") or []
+    return [rel for rel in releases if isinstance(rel, dict)]
+
+
+async def fetch_release(
+    account: str,
+    event_slug: str,
+    api_key: str,
+    release_slug: str,
+) -> dict[str, Any]:
+    url = f"{TITO_BASE}/{account}/{event_slug}/releases/{release_slug}"
+    params = {"version": "3.1"}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.get(url, headers=_headers(api_key), params=params)
+        r.raise_for_status()
+        data = r.json()
+    rel = data.get("release")
+    if not isinstance(rel, dict):
+        raise RuntimeError(f"Ti.to release {release_slug!r} not found")
+    return rel
+
+
+async def patch_release_quantity(
+    account: str,
+    event_slug: str,
+    api_key: str,
+    release_slug: str,
+    quantity: int,
+) -> dict[str, Any]:
+    url = f"{TITO_BASE}/{account}/{event_slug}/releases/{release_slug}"
+    params = {"version": "3.1"}
+    body = {"release": {"quantity": int(quantity)}}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.patch(
+            url,
+            headers={**_headers(api_key), "Content-Type": "application/json"},
+            params=params,
+            json=body,
+        )
+        if r.is_error:
+            snippet = (r.text or "")[:2500]
+            raise RuntimeError(f"Ti.to PATCH release {release_slug} {r.status_code}: {snippet}") from None
+        data = r.json()
+    rel = data.get("release")
+    if not isinstance(rel, dict):
+        raise RuntimeError(f"Ti.to PATCH release {release_slug!r} returned no release")
+    logger.info(
+        "Ti.to release quantity patched slug=%s quantity=%s tickets_count=%s",
+        release_slug,
+        rel.get("quantity"),
+        rel.get("tickets_count"),
+    )
+    return rel
+
+
+async def adjust_release_quantity(
+    account: str,
+    event_slug: str,
+    api_key: str,
+    release_slug: str,
+    delta: int,
+) -> tuple[int, int]:
+    """Read-modify-write release.quantity by delta. Returns (before, after)."""
+    rel = await fetch_release(account, event_slug, api_key, release_slug)
+    raw_q = rel.get("quantity")
+    if raw_q is None or raw_q == "":
+        raise RuntimeError(f"Ti.to release {release_slug!r} has unlimited quantity — cannot adjust")
+    before = int(raw_q)
+    sold = int(rel.get("tickets_count") or 0)
+    after = before + int(delta)
+    if after < sold:
+        raise RuntimeError(
+            f"Ti.to release {release_slug!r}: quantity {after} would be below tickets_count {sold}"
+        )
+    if after < 0:
+        raise RuntimeError(f"Ti.to release {release_slug!r}: quantity {after} would be negative")
+    await patch_release_quantity(account, event_slug, api_key, release_slug, after)
+    return before, after
+
+
 async def fetch_releases(account: str, event_slug: str, api_key: str) -> list[dict[str, Any]]:
     """Public + on_sale releases for form."""
     url = f"{TITO_BASE}/{account}/{event_slug}/releases"
@@ -77,6 +201,8 @@ async def fetch_releases(account: str, event_slug: str, api_key: str) -> list[di
             continue
         # API 3.1: state_name is "on_sale" | "off_sale"; older code used wrong key "state"
         if rel.get("secret") is True:
+            continue
+        if release_title_is_invoice_clone(rel):
             continue
         if rel.get("off_sale") is True:
             continue

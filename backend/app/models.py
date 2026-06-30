@@ -16,6 +16,7 @@ class OrderStatus(str, enum.Enum):
     awaiting_payment = "awaiting_payment"
     paid_processing = "paid_processing"
     completed = "completed"
+    cancelled = "cancelled"
     error = "error"
 
 
@@ -59,6 +60,17 @@ class Order(Base):
 
     tito_discount_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     tito_discount_code_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Ti.to invoice clone (title contains "invoice") — voucher pool after payment
+    tito_invoice_release_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tito_invoice_release_slug: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # Audit: hold on public release after order (quantity PATCH)
+    tito_public_quantity_before: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tito_public_quantity_after: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tito_quantity_held_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    tito_quantity_released_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    tito_invoice_quantity_before: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tito_invoice_quantity_after: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tito_invoice_quantity_patched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     pipedrive_person_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

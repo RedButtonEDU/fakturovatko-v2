@@ -16,6 +16,7 @@ from app.email_template_loader import render_order_proforma
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
 from app.services import tito as tito_svc
+from app.services.tito_inventory import alert_hold_failure, apply_public_release_hold
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,8 @@ async def _assert_release_available(release_id: int, release_slug: str) -> None:
     raw = await tito_svc.fetch_releases(s.tito_account_slug, s.tito_event_slug, s.tito_api_key)
     match = next((r for r in raw if int(r.get("id") or 0) == release_id), None)
     if match is None:
+        raise HTTPException(422, "Selected ticket type is not available for sale")
+    if tito_svc.release_title_is_invoice_clone(match):
         raise HTTPException(422, "Selected ticket type is not available for sale")
     slug = str(match.get("slug") or "")
     if slug and slug != release_slug.strip():
@@ -170,6 +173,16 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         order.last_error = f"email: {e}"
         db.commit()
         raise HTTPException(503, f"Could not send email: {e}") from e
+
+    try:
+        await apply_public_release_hold(order)
+        db.commit()
+        db.refresh(order)
+    except Exception as e:
+        logger.exception("Ti.to quantity hold failed for order %s: %s", public_id, e)
+        order.last_error = f"tito_hold: {e}"
+        db.commit()
+        alert_hold_failure(order, e)
 
     msg = "Proforma vytvořena v Allfredu a odeslána e-mailem."
     if not s.gmail_refresh_token:
