@@ -75,6 +75,7 @@ class Order(Base):
     error_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     error_step: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     paid_customer_email_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    manual_final_invoice_request_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     pipedrive_person_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

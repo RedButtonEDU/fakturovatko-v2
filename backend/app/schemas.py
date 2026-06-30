@@ -122,6 +122,7 @@ class OrderAdminOut(BaseModel):
     tito_quantity_held_at: Optional[str] = None
     tito_invoice_quantity_patched_at: Optional[str] = None
     paid_customer_email_sent_at: Optional[str] = None
+    manual_final_invoice_request_sent_at: Optional[str] = None
     invoice_to_company: bool
     company_name: Optional[str] = None
     company_registration: Optional[str] = None
@@ -133,7 +134,7 @@ class OrderAdminOut(BaseModel):
     admin_url: str
     allfred_proforma_url: Optional[str] = None
     allfred_final_invoice_url: Optional[str] = None
-    tito_release_url: Optional[str] = None
+    tito_voucher_url: Optional[str] = None
     tito_invoice_release_url: Optional[str] = None
     audit_log: list[AdminAuditEntryOut] = []
 

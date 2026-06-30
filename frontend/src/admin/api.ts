@@ -86,6 +86,7 @@ export type OrderAdminOut = {
   tito_quantity_held_at: string | null
   tito_invoice_quantity_patched_at: string | null
   paid_customer_email_sent_at: string | null
+  manual_final_invoice_request_sent_at: string | null
   invoice_to_company: boolean
   company_name: string | null
   company_registration: string | null
@@ -97,7 +98,7 @@ export type OrderAdminOut = {
   admin_url: string
   allfred_proforma_url: string | null
   allfred_final_invoice_url: string | null
-  tito_release_url: string | null
+  tito_voucher_url: string | null
   tito_invoice_release_url: string | null
   audit_log: AdminAuditEntry[]
 }

@@ -1,12 +1,14 @@
-Subject: Exponential Summit 2027 – faktura a slevový kód
+Subject: Exponential Summit 2027 – slevový kód na registraci
 
 Dobrý den,
 
-v příloze je finální faktura k vaší objednávce vstupenek na Exponential Summit 2027
+děkujeme za úhradu zálohové faktury k vaší objednávce vstupenek na Exponential Summit 2027.
 
-Slevový kód na Ti.to: $discount_code - přes něj si můžete Vaše vstupenky objednat a poté zaregistrovat účast.
+Slevový kód na Ti.to: $discount_code
 
-V případě, dotazů či změn na faktuře prosím kontaktujte Dominika Holíčka: dominik@redbuttonedu.cz.
+Přes něj si můžete vstupenky objednat a poté zaregistrovat účast. Finální fakturu vám zašleme samostatně po jejím vystavení.
+
+V případě dotazů prosím kontaktujte Dominika Holíčka: dominik@redbuttonedu.cz.
 
 Těšíme se v únoru.
 

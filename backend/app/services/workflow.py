@@ -9,13 +9,13 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.address_utils import billing_address_one_line
 from app.models import Order, OrderStatus
-from app.email_template_loader import render_order_paid_invoice
+from app.email_template_loader import render_manual_final_invoice_request, render_order_paid_voucher
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
 from app.services import pipedrive as pd_svc
 from app.services import tito as tito_svc
+from app.services.ops_links import admin_order_url, allfred_proforma_url
 from app.services.order_errors import OrderErrorCode, clear_order_error, set_order_error
-from app.services.pdf_mock import MOCK_PDF_BYTES
 from app.services.tito_inventory import (
     alert_workflow_failure,
     credit_invoice_release_pool,
@@ -40,15 +40,39 @@ def _proforma_fake_paid_from_config(pf: dict[str, Any], s: Settings) -> bool:
     return pid in refs or ino in refs
 
 
-def _find_invoice_for_project(
-    invoices: list[dict[str, Any]],
-    project_ids: set[str],
-) -> Optional[dict[str, Any]]:
-    for inv in invoices:
-        pids = allfred_svc.find_project_ids(inv)
-        if project_ids & set(pids):
-            return inv
-    return None
+def _send_manual_final_invoice_request(order: Order, s: Settings, db: Session) -> None:
+    """Notify ops to create final invoice manually in Allfred (no API automation)."""
+    if order.manual_final_invoice_request_sent_at is not None:
+        return
+
+    recipient = (s.allfred_quick_setup_error_email or "").strip()
+    if not recipient:
+        logger.warning("Manual final invoice request skipped — no recipient configured")
+        return
+    if not s.gmail_refresh_token:
+        logger.warning("Manual final invoice request skipped — Gmail not configured")
+        return
+
+    proforma_url = allfred_proforma_url(order.allfred_proforma_id)
+    if not proforma_url:
+        proforma_url = f"(mock proforma id={order.allfred_proforma_id or '?'})"
+
+    subject, body, body_html = render_manual_final_invoice_request(
+        public_id=order.public_id,
+        customer_name=order.full_name or order.company_name or "?",
+        customer_email=order.email,
+        proforma_url=proforma_url,
+        discount_code=order.tito_discount_code or "(chyba)",
+        ticket_quantity=order.ticket_quantity,
+        admin_url=admin_order_url(order),
+    )
+    try:
+        email_svc.send_email(recipient, subject, body, body_html=body_html)
+        order.manual_final_invoice_request_sent_at = datetime.utcnow()
+        db.commit()
+    except Exception as e:
+        logger.exception("Manual final invoice request email failed for %s: %s", order.public_id[:8], e)
+        alert_workflow_failure(order, "E-mail — ruční finální faktura", e)
 
 
 async def is_proforma_paid_for_order(
@@ -77,7 +101,6 @@ async def process_single_paid_order(
     db: Session,
     *,
     proformas: Optional[list[dict[str, Any]]] = None,
-    invoices: Optional[list[dict[str, Any]]] = None,
 ) -> None:
     """Run paid workflow for one order (cron or admin retry). Caller sets paid_processing."""
     s = get_settings()
@@ -90,7 +113,6 @@ async def process_single_paid_order(
     if not pf_id or str(pf_id).startswith("mock-"):
         if not s.allfred_mock_paid:
             raise RuntimeError("Mock proforma — ALLFRED_MOCK_PAID not enabled")
-        project_ids = {order.allfred_project_id or "mock"}
     else:
         if proformas is None:
             proformas = await allfred_svc.fetch_all_proformas()
@@ -103,7 +125,6 @@ async def process_single_paid_order(
             paid = True
         if not paid:
             raise RuntimeError("Proforma is not paid yet")
-        project_ids = set(allfred_svc.find_project_ids(pf))
 
     if not s.tito_api_key:
         raise RuntimeError("TITO_API_KEY missing")
@@ -167,57 +188,8 @@ async def process_single_paid_order(
             alert_workflow_failure(order, "Ti.to voucher", e)
             raise
 
-    final_invoice_id: Optional[str] = order.allfred_final_invoice_id
-    pdf_bytes: Optional[bytes] = None
-
-    if not final_invoice_id:
-        if invoices is None and s.allfred_api_key:
-            invoices = await allfred_svc.fetch_all_invoices()
-        invoices = invoices or []
-
-        if allfred_svc.quick_setup_ready():
-            try:
-                qsr = await allfred_svc.quick_setup_client_project_invoice(order)
-                oi = (qsr.get("outgoingInvoice") or {}) if isinstance(qsr, dict) else {}
-                if oi.get("id"):
-                    final_invoice_id = str(oi["id"])
-                    pdf_bytes = await allfred_svc.resolve_outgoing_invoice_pdf_bytes(oi)
-            except Exception as e:
-                logger.warning("Allfred quickSetupClientProjectInvoice failed: %s", e)
-                set_order_error(
-                    order,
-                    code=OrderErrorCode.allfred_final_invoice_failed,
-                    step="Allfred finální faktura",
-                    error=e,
-                )
-                db.commit()
-                alert_workflow_failure(order, "Allfred finální faktura", e)
-                raise
-
-        if not final_invoice_id and invoices:
-            inv = _find_invoice_for_project(invoices, project_ids)
-            if inv:
-                final_invoice_id = str(inv.get("id"))
-                pdf_bytes = await allfred_svc.download_outgoing_invoice_pdf_by_id(final_invoice_id)
-
-        if not final_invoice_id:
-            final_invoice_id = f"mock-final-{order.public_id[:8]}"
-        order.allfred_final_invoice_id = final_invoice_id
-        if pdf_bytes is None:
-            pdf_bytes = MOCK_PDF_BYTES
-        db.commit()
-        clear_order_error(order)
-
     if order.paid_customer_email_sent_at is None:
-        if pdf_bytes is None and order.allfred_final_invoice_id:
-            try:
-                pdf_bytes = await allfred_svc.download_outgoing_invoice_pdf_by_id(
-                    order.allfred_final_invoice_id
-                )
-            except Exception as e:
-                logger.warning("PDF re-download failed for %s: %s", order.public_id[:8], e)
-                pdf_bytes = MOCK_PDF_BYTES
-        paid_subject, body, body_html = render_order_paid_invoice(
+        paid_subject, body, body_html = render_order_paid_voucher(
             discount_code=order.tito_discount_code or "(chyba)",
         )
         if s.gmail_refresh_token:
@@ -227,8 +199,6 @@ async def process_single_paid_order(
                     paid_subject,
                     body,
                     body_html=body_html,
-                    attachment_bytes=pdf_bytes if pdf_bytes is not None else MOCK_PDF_BYTES,
-                    attachment_name=f"faktura-{order.public_id[:8]}.pdf",
                 )
                 order.paid_customer_email_sent_at = datetime.utcnow()
                 db.commit()
@@ -243,6 +213,8 @@ async def process_single_paid_order(
                 db.commit()
                 alert_workflow_failure(order, "E-mail zákazníkovi", e)
                 raise
+
+    _send_manual_final_invoice_request(order, s, db)
 
     if s.pipedrive_api_token:
         pid, oid = await pd_svc.ensure_person_and_org(
@@ -331,7 +303,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
     needs_allfred = any(_needs_allfred_fetch(o) for o in orders)
 
     proformas: list[dict[str, Any]] = []
-    invoices: list[dict[str, Any]] = []
     if needs_allfred:
         if not s.allfred_api_key:
             logger.error("Orders with real Allfred proforma IDs require ALLFRED_API_KEY")
@@ -345,7 +316,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
             }
         try:
             proformas = await allfred_svc.fetch_all_proformas()
-            invoices = await allfred_svc.fetch_all_invoices()
         except Exception as e:
             logger.exception("Allfred fetch failed: %s", e)
             return {
@@ -393,7 +363,6 @@ async def process_paid_orders(db: Session) -> dict[str, Any]:
                 order,
                 db,
                 proformas=proformas,
-                invoices=invoices,
             )
             processed += 1
         except Exception as e:

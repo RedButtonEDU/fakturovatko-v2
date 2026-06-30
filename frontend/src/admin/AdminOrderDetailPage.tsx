@@ -43,6 +43,30 @@ function statusBadge(status: string) {
   return <span className={cls}>{status}</span>
 }
 
+function formatSentAt(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleString('cs-CZ')
+}
+
+function workflowStepStatus(done: boolean, pendingLabel: string, doneAt: string | null) {
+  return (
+    <li className={done ? 'admin-workflow-step admin-workflow-step--done' : 'admin-workflow-step'}>
+      <span className="admin-workflow-step-icon" aria-hidden>
+        {done ? '✓' : '○'}
+      </span>
+      <span>
+        {pendingLabel}
+        {done && doneAt && (
+          <span className="admin-workflow-step-time"> · {formatSentAt(doneAt)}</span>
+        )}
+        {!done && <span className="admin-workflow-step-time"> · neodesláno</span>}
+      </span>
+    </li>
+  )
+}
+
 export function AdminOrderDetailPage() {
   const { publicId } = useParams<{ publicId: string }>()
   const [order, setOrder] = useState<OrderAdminOut | null>(null)
@@ -160,8 +184,8 @@ export function AdminOrderDetailPage() {
     order.needs_legacy_hold_repair ? 'Ti.to hold (retroaktivní snížení public qty)' : null,
     'Ti.to credit invoice pool',
     'Ti.to voucher',
-    'Allfred finální faktura',
-    'E-mail zákazníkovi',
+    'E-mail zákazníkovi (voucher)',
+    'E-mail — ruční finální faktura',
   ].filter(Boolean)
 
   return (
@@ -196,9 +220,9 @@ export function AdminOrderDetailPage() {
               Allfred faktura
             </a>
           )}
-          {order.tito_release_url && (
-            <a href={order.tito_release_url} target="_blank" rel="noreferrer">
-              Ti.to release
+          {order.tito_voucher_url && (
+            <a href={order.tito_voucher_url} target="_blank" rel="noreferrer">
+              Ti.to voucher{order.tito_discount_code ? ` (${order.tito_discount_code})` : ''}
             </a>
           )}
           {order.tito_invoice_release_url && (
@@ -208,6 +232,22 @@ export function AdminOrderDetailPage() {
           )}
         </div>
       </div>
+
+      <section className="admin-workflow-status" aria-label="Stav e-mailů po zaplacení">
+        <h2 className="admin-workflow-status-title">E-maily po zaplacení</h2>
+        <ul className="admin-workflow-steps">
+          {workflowStepStatus(
+            Boolean(order.paid_customer_email_sent_at),
+            'E-mail zákazníkovi (Ti.to voucher)',
+            order.paid_customer_email_sent_at,
+          )}
+          {workflowStepStatus(
+            Boolean(order.manual_final_invoice_request_sent_at),
+            'E-mail Lukášovi — ruční finální faktura',
+            order.manual_final_invoice_request_sent_at,
+          )}
+        </ul>
+      </section>
 
       {order.partial_failure_hint === 'voucher_without_email' && (
         <div className="admin-banner admin-banner-warn">

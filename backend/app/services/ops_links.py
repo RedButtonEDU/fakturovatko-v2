@@ -21,7 +21,10 @@ def allfred_proforma_url(proforma_id: Optional[str]) -> Optional[str]:
     if not proforma_id or str(proforma_id).startswith("mock-"):
         return None
     s = get_settings()
-    return f"https://{s.allfred_workspace}.allfred.io/outgoing-proforma-invoices/{proforma_id}"
+    return (
+        f"https://{s.allfred_workspace}.allfred.io/invoices/proforma-invoices/detail/"
+        f"?id={proforma_id}"
+    )
 
 
 def allfred_final_invoice_url(invoice_id: Optional[str]) -> Optional[str]:
@@ -39,6 +42,15 @@ def tito_release_url(release_slug: Optional[str]) -> Optional[str]:
         f"https://ti.to/{s.tito_account_slug}/{s.tito_event_slug}/"
         f"releases/{release_slug}/edit"
     )
+
+
+def tito_discount_url(discount_code: Optional[str]) -> Optional[str]:
+    """Ti.to admin URL for a discount/voucher code (only meaningful after voucher creation)."""
+    code = (discount_code or "").strip()
+    if not code:
+        return None
+    s = get_settings()
+    return f"https://ti.to/{s.tito_account_slug}/{s.tito_event_slug}/discount/{code}"
 
 
 def build_workflow_alert_body(
@@ -71,7 +83,13 @@ def build_workflow_alert_body(
         if pf_url:
             proforma_line += f" → {pf_url}"
         lines.append(proforma_line)
-    if order.tito_release_slug:
+    if order.tito_discount_code:
+        v_url = tito_discount_url(order.tito_discount_code)
+        voucher_line = f"Ti.to voucher: {order.tito_discount_code}"
+        if v_url:
+            voucher_line += f" → {v_url}"
+        lines.append(voucher_line)
+    elif order.tito_release_slug:
         tito_line = f"Ti.to release: {order.tito_release_title} ({order.tito_release_slug})"
         t_url = tito_release_url(order.tito_release_slug)
         if t_url:

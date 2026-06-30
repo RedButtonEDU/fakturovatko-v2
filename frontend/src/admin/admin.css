@@ -154,7 +154,69 @@
 .admin-detail-grid {
   display: grid;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 720px) {
+  .admin-detail-grid {
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+}
+
+.admin-workflow-status {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--stroke);
+  border-left: 3px solid var(--brand-accent);
+  border-radius: var(--r-1);
+  background: var(--ink-3);
+}
+
+.admin-workflow-status-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.admin-workflow-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-workflow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-9);
+}
+
+.admin-workflow-step + .admin-workflow-step {
+  margin-top: 0.45rem;
+}
+
+.admin-workflow-step--done {
+  color: var(--white);
+}
+
+.admin-workflow-step-icon {
+  flex-shrink: 0;
+  width: 1.1rem;
+  color: var(--ink-8);
+  font-weight: 700;
+}
+
+.admin-workflow-step--done .admin-workflow-step-icon {
+  color: #6dd47e;
+}
+
+.admin-workflow-step-time {
+  color: var(--ink-8);
+  font-size: 0.8125rem;
 }
 
 .admin-links {

@@ -3,6 +3,7 @@
 import logging
 
 from app.config import get_settings
+from app.email_brand import plain_body_to_html
 from app.services import email as email_svc
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,8 @@ def notify_ops(subject: str, body: str) -> None:
         logger.error("ops alert skipped (GMAIL_REFRESH_TOKEN missing): %s — %s", subject, body[:500])
         return
     try:
-        email_svc.send_email(to, subject, body)
+        body_html = plain_body_to_html(body, subject=subject, variant="ops")
+        email_svc.send_email(to, subject, body, body_html=body_html)
         logger.info("ops alert sent to %s: %s", to, subject)
     except Exception as e:
         logger.exception("ops alert failed (%s): %s", subject, e)

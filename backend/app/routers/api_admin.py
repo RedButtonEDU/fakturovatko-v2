@@ -34,6 +34,7 @@ from app.services.ops_links import (
     admin_order_url,
     allfred_final_invoice_url,
     allfred_proforma_url,
+    tito_discount_url,
     tito_release_url,
 )
 from app.services.tito_inventory import apply_public_release_hold
@@ -157,6 +158,7 @@ def _order_to_admin_out(order: Order, audit: list[AdminAuditLog]) -> OrderAdminO
         tito_quantity_held_at=_iso(order.tito_quantity_held_at),
         tito_invoice_quantity_patched_at=_iso(order.tito_invoice_quantity_patched_at),
         paid_customer_email_sent_at=_iso(order.paid_customer_email_sent_at),
+        manual_final_invoice_request_sent_at=_iso(order.manual_final_invoice_request_sent_at),
         invoice_to_company=order.invoice_to_company,
         company_name=order.company_name,
         company_registration=order.company_registration,
@@ -168,7 +170,7 @@ def _order_to_admin_out(order: Order, audit: list[AdminAuditLog]) -> OrderAdminO
         admin_url=admin_order_url(order),
         allfred_proforma_url=allfred_proforma_url(order.allfred_proforma_id),
         allfred_final_invoice_url=allfred_final_invoice_url(order.allfred_final_invoice_id),
-        tito_release_url=tito_release_url(order.tito_release_slug),
+        tito_voucher_url=tito_discount_url(order.tito_discount_code),
         tito_invoice_release_url=tito_release_url(order.tito_invoice_release_slug),
         audit_log=[
             AdminAuditEntryOut(

@@ -54,6 +54,7 @@ def migrate_schema() -> None:
             "error_code": "VARCHAR(64)",
             "error_step": "VARCHAR(128)",
             "paid_customer_email_sent_at": "DATETIME",
+            "manual_final_invoice_request_sent_at": "DATETIME",
         }
         for name, sql_type in admin_cols.items():
             if name not in cols:
