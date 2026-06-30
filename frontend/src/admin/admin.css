@@ -92,6 +92,44 @@
   font-weight: 600;
 }
 
+.admin-sortable {
+  padding: 0;
+}
+
+.admin-sort-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-sort-button:hover {
+  color: var(--white);
+}
+
+.admin-sortable--active .admin-sort-button {
+  color: var(--white);
+}
+
+.admin-sort-indicator {
+  font-size: 0.75rem;
+  opacity: 0.45;
+  line-height: 1;
+}
+
+.admin-sortable--active .admin-sort-indicator {
+  opacity: 1;
+  color: var(--brand-accent);
+}
+
 .admin-link {
   color: var(--brand-accent);
   text-decoration: none;

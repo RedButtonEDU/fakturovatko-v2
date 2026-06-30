@@ -1,10 +1,12 @@
-Subject: Exponential Summit 2027 – slevový kód na registraci
+Subject: Exponential Summit 2027 – Slevový kód na registraci
 
 Dobrý den,
 
 děkujeme za úhradu zálohové faktury k vaší objednávce vstupenek na Exponential Summit 2027.
 
 Slevový kód na Ti.to: $discount_code
+
+Ve vaší objednávce máte $ticket_quantity_label — při registraci na Ti.to prosím objednejte stejný počet vstupenek.
 
 Přes něj si můžete vstupenky objednat a poté zaregistrovat účast. Finální fakturu vám zašleme samostatně po jejím vystavení.
 

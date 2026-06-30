@@ -191,6 +191,7 @@ async def process_single_paid_order(
     if order.paid_customer_email_sent_at is None:
         paid_subject, body, body_html = render_order_paid_voucher(
             discount_code=order.tito_discount_code or "(chyba)",
+            ticket_quantity=order.ticket_quantity,
         )
         if s.gmail_refresh_token:
             try:

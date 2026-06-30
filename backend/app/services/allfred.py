@@ -247,6 +247,27 @@ def _quick_setup_anchor_date() -> date:
     return max(today, floor)
 
 
+def _quick_setup_new_project_payload(
+    order: Order,
+    *,
+    start_date: str,
+    expected_end_date: Optional[str] = None,
+) -> dict[str, Any]:
+    """QuickSetupProjectInput pro nový Allfred projekt (typicky u proformy)."""
+    s = get_settings()
+    payload: dict[str, Any] = {
+        "title": f"Exponential Summit 2027 — {order.tito_release_title} ({order.public_id[:8]})",
+        "billable": True,
+        "project_manager_id": s.allfred_project_manager_id,
+        "team_id": s.allfred_team_id,
+        "start_date": start_date,
+    }
+    end = (expected_end_date or "").strip()
+    if end:
+        payload["expected_end_date"] = end
+    return payload
+
+
 def _iso_date_only(v: Any) -> str:
     if v is None:
         return ""
@@ -457,21 +478,15 @@ def build_quick_setup_input(
         if reused:
             project_payload = reused
         else:
-            project_payload = {
-                "title": f"Exponential Summit 2027 — {order.tito_release_title} ({order.public_id[:8]})",
-                "billable": True,
-                "project_manager_id": s.allfred_project_manager_id,
-                "team_id": s.allfred_team_id,
-                "start_date": today,
-            }
+            project_payload = _quick_setup_new_project_payload(order, start_date=today)
+    elif document_type == "PROFORMA":
+        project_payload = _quick_setup_new_project_payload(
+            order,
+            start_date=issue_date,
+            expected_end_date=s.allfred_project_expected_end_date,
+        )
     else:
-        project_payload = {
-            "title": f"Exponential Summit 2027 — {order.tito_release_title} ({order.public_id[:8]})",
-            "billable": True,
-            "project_manager_id": s.allfred_project_manager_id,
-            "team_id": s.allfred_team_id,
-            "start_date": today,
-        }
+        project_payload = _quick_setup_new_project_payload(order, start_date=today)
 
     inp: dict[str, Any] = {
         "client_data": client_data,

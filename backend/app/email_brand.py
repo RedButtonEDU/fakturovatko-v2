@@ -7,6 +7,7 @@ import re
 from typing import Literal
 
 from app.config import get_settings
+from app.services.ops_links import tito_discount_url
 
 # Exponential Summit v3 tokens (frontend/src/App.css)
 _BG = "#1a1a1a"
@@ -112,6 +113,19 @@ def _meta_row(label: str, value_html: str) -> str:
     )
 
 
+def _voucher_code_html(code: str, *, link_for_customer: bool) -> str:
+    raw = code.strip()
+    esc = html_module.escape(raw)
+    if not link_for_customer or raw.startswith("("):
+        return esc
+    url = tito_discount_url(raw)
+    if not url:
+        return esc
+    href = html_module.escape(url, quote=True)
+    style = f"color:{_WHITE};text-decoration:underline;font-weight:800;"
+    return f'<a href="{href}" style="{style}">{esc}</a>'
+
+
 def _plain_line_to_html(line: str, *, variant: str) -> str:
     stripped = line.strip()
     if not stripped:
@@ -119,9 +133,13 @@ def _plain_line_to_html(line: str, *, variant: str) -> str:
 
     m = _VOUCHER_LINE.match(stripped)
     if m:
-        code = html_module.escape(m.group(2).strip())
+        raw_code = m.group(2).strip()
         label = html_module.escape(m.group(1).strip().rstrip(":"))
-        return _paragraph(f"{label}:") + _price_box(code)
+        code_html = _voucher_code_html(
+            raw_code,
+            link_for_customer=variant == "customer" and m.group(1).lower().startswith("slevový kód"),
+        )
+        return _paragraph(f"{label}:") + _price_box(code_html)
 
     if _URL_LINE.match(stripped):
         return _url_button(stripped)
@@ -179,6 +197,8 @@ def _subject_title(subject: str | None, *, variant: str) -> str | None:
         if sep in title:
             title = title.split(sep, 1)[1].strip()
             break
+    if title and title[0].islower():
+        title = title[0].upper() + title[1:]
     return title or None
 
 

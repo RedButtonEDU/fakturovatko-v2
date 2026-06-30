@@ -42,6 +42,15 @@ def _load_parsed(name: str) -> tuple[str, str]:
     return m.group(1).strip(), m.group(2).strip()
 
 
+def _ticket_quantity_label(quantity: int) -> str:
+    n = max(1, int(quantity))
+    if n == 1:
+        return "1 vstupenku"
+    if 2 <= n <= 4:
+        return f"{n} vstupenky"
+    return f"{n} vstupenek"
+
+
 def render_order_proforma(*, public_id: str) -> tuple[str, str, str]:
     """Subject, plain text, HTML body (pro zálohová faktura / objednávka)."""
     subj_t, body_t = _load_parsed("order_proforma")
@@ -51,10 +60,13 @@ def render_order_proforma(*, public_id: str) -> tuple[str, str, str]:
     return subject, plain, plain_body_to_html(plain, subject=subject, variant="customer")
 
 
-def render_order_paid_voucher(*, discount_code: str) -> tuple[str, str, str]:
+def render_order_paid_voucher(*, discount_code: str, ticket_quantity: int) -> tuple[str, str, str]:
     """Subject, plain text, HTML body (po zaplacení — Ti.to voucher, bez finální faktury)."""
     subj_t, body_t = _load_parsed("order_paid_invoice")
-    ctx = {"discount_code": discount_code}
+    ctx = {
+        "discount_code": discount_code,
+        "ticket_quantity_label": _ticket_quantity_label(ticket_quantity),
+    }
     subject = Template(subj_t).substitute(ctx)
     plain = Template(body_t).substitute(ctx)
     return subject, plain, plain_body_to_html(plain, subject=subject, variant="customer")

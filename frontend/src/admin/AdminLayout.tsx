@@ -56,7 +56,7 @@ function AdminLayout({ email }: { email: string }) {
     <div className="admin-page page">
       <header className="site-header admin-header">
         <a href="/" className="logo">
-          <img src="/exponential-summit-logo.svg" alt="Exponential Summit" />
+          <img src="/assets/exponential-summit-logo.svg" alt="Exponential Summit by Red Button" />
         </a>
         <div className="header-right">
           <span className="admin-user">{email}</span>

@@ -111,8 +111,28 @@ export function logout(): Promise<{ ok: boolean }> {
   return adminFetch('/auth/logout', { method: 'POST' })
 }
 
-export function listOrders(skip = 0, limit = 50): Promise<OrderAdminListOut> {
-  return adminFetch(`/api/admin/orders?skip=${skip}&limit=${limit}`)
+export type OrderAdminListSortKey =
+  | 'created_at'
+  | 'full_name'
+  | 'status'
+  | 'error_code'
+  | 'allfred_proforma_id'
+
+export type OrderAdminListSortDir = 'asc' | 'desc'
+
+export function listOrders(
+  skip = 0,
+  limit = 50,
+  sortBy: OrderAdminListSortKey = 'created_at',
+  sortDir: OrderAdminListSortDir = 'desc',
+): Promise<OrderAdminListOut> {
+  const params = new URLSearchParams({
+    skip: String(skip),
+    limit: String(limit),
+    sort_by: sortBy,
+    sort_dir: sortDir,
+  })
+  return adminFetch(`/api/admin/orders?${params}`)
 }
 
 export function getOrder(publicId: string): Promise<OrderAdminOut> {

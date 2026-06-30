@@ -7,7 +7,8 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import asc, desc, nulls_last
 from sqlalchemy.orm import Session
 
 from app import auth
@@ -43,6 +44,22 @@ from app.services.workflow import is_proforma_paid_for_order, process_single_pai
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+_ORDER_LIST_SORT_COLUMNS: dict[str, Any] = {
+    "created_at": Order.created_at,
+    "full_name": Order.full_name,
+    "status": Order.status,
+    "error_code": Order.error_code,
+    "allfred_proforma_id": Order.allfred_proforma_id,
+}
+
+
+def _order_list_sort_clause(sort_by: str, sort_dir: str):
+    col = _ORDER_LIST_SORT_COLUMNS.get(sort_by, Order.created_at)
+    descending = sort_dir != "asc"
+    if sort_by in ("error_code", "allfred_proforma_id"):
+        return nulls_last(desc(col) if descending else asc(col))
+    return desc(col) if descending else asc(col)
 
 
 def _trim(s: Optional[str]) -> Optional[str]:
@@ -190,12 +207,14 @@ def _order_to_admin_out(order: Order, audit: list[AdminAuditLog]) -> OrderAdminO
 def list_orders(
     skip: int = 0,
     limit: int = 50,
+    sort_by: str = Query("created_at", pattern="^(created_at|full_name|status|error_code|allfred_proforma_id)$"),
+    sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     _admin: str = Depends(auth.require_admin_session),
 ):
     limit = min(max(limit, 1), 200)
     skip = max(skip, 0)
-    q = db.query(Order).order_by(Order.created_at.desc())
+    q = db.query(Order).order_by(_order_list_sort_clause(sort_by, sort_dir))
     total = q.count()
     rows = q.offset(skip).limit(limit).all()
     items = [
