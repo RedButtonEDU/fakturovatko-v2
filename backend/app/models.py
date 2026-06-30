@@ -72,6 +72,22 @@ class Order(Base):
     tito_invoice_quantity_after: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     tito_invoice_quantity_patched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    error_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    error_step: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    paid_customer_email_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     pipedrive_person_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     pipedrive_org_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    admin_email: Mapped[str] = mapped_column(String(320))
+    order_public_id: Mapped[str] = mapped_column(String(36), index=True)
+    action: Mapped[str] = mapped_column(String(64))
+    payload_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    result: Mapped[str] = mapped_column(String(512))

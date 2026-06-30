@@ -16,6 +16,7 @@ from app.email_template_loader import render_order_proforma
 from app.services import allfred as allfred_svc
 from app.services import email as email_svc
 from app.services import tito as tito_svc
+from app.services.order_errors import OrderErrorCode, set_order_error
 from app.services.tito_inventory import alert_hold_failure, apply_public_release_hold
 
 logger = logging.getLogger(__name__)
@@ -170,7 +171,12 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
                 attachment_name=f"proforma-{public_id[:8]}.pdf",
             )
     except Exception as e:
-        order.last_error = f"email: {e}"
+        set_order_error(
+            order,
+            code=OrderErrorCode.proforma_email_failed,
+            step="Proforma e-mail",
+            error=e,
+        )
         db.commit()
         raise HTTPException(503, f"Could not send email: {e}") from e
 
@@ -180,9 +186,8 @@ async def create_order(body: OrderCreate, db: Session = Depends(get_db)):
         db.refresh(order)
     except Exception as e:
         logger.exception("Ti.to quantity hold failed for order %s: %s", public_id, e)
-        order.last_error = f"tito_hold: {e}"
-        db.commit()
         alert_hold_failure(order, e)
+        db.commit()
 
     msg = "Proforma vytvořena v Allfredu a odeslána e-mailem."
     if not s.gmail_refresh_token:

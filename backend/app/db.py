@@ -50,6 +50,14 @@ def migrate_schema() -> None:
         for name, sql_type in tito_cols.items():
             if name not in cols:
                 conn.execute(text(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}"))
+        admin_cols = {
+            "error_code": "VARCHAR(64)",
+            "error_step": "VARCHAR(128)",
+            "paid_customer_email_sent_at": "DATETIME",
+        }
+        for name, sql_type in admin_cols.items():
+            if name not in cols:
+                conn.execute(text(f"ALTER TABLE orders ADD COLUMN {name} {sql_type}"))
 
 
 def get_db():

@@ -1,4 +1,4 @@
-"""Simple in-memory rate limiting for public lookup endpoints."""
+"""Simple in-memory rate limiting for public lookup and admin endpoints."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from fastapi import HTTPException, Request
 
 _store: dict[str, list[float]] = defaultdict(list)
 _WINDOW_S = 60.0
+_HOUR_S = 3600.0
 
 
 def _client_ip(request: Request) -> str:
@@ -31,5 +32,20 @@ def enforce_per_minute(request: Request, *, limit: int, scope: str) -> None:
         raise HTTPException(
             status_code=429,
             detail="Too many lookup requests — try again in a moment.",
+        )
+    _store[key].append(now)
+
+
+def enforce_per_hour(request: Request, *, limit: int, scope: str) -> None:
+    """Raise 429 when more than ``limit`` requests per hour from one client."""
+    if limit <= 0:
+        return
+    key = f"{scope}:{_client_ip(request)}"
+    now = time()
+    _store[key] = [t for t in _store[key] if now - t < _HOUR_S]
+    if len(_store[key]) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests — try again later.",
         )
     _store[key].append(now)

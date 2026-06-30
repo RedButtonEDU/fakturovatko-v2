@@ -8,6 +8,8 @@ from app.config import Settings, get_settings
 from app.models import Order
 from app.services import tito as tito_svc
 from app.services.ops_alert import notify_ops
+from app.services.ops_links import build_workflow_alert_body
+from app.services.order_errors import OrderErrorCode, order_error_label, set_order_error
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,16 @@ async def restore_public_release_hold(order: Order) -> None:
 
 
 async def credit_invoice_release_pool(order: Order) -> tuple[int, int]:
-    """After payment: increase invoice clone release quantity."""
+    """After payment: increase invoice clone release quantity (idempotent)."""
+    if order.tito_invoice_quantity_patched_at is not None:
+        before = order.tito_invoice_quantity_before or 0
+        after = order.tito_invoice_quantity_after or before
+        logger.info(
+            "Ti.to invoice pool credit skipped (already patched) order=%s",
+            order.public_id[:8],
+        )
+        return before, after
+
     if not order.tito_invoice_release_slug:
         raise RuntimeError(f"Order {order.public_id} has no tito_invoice_release_slug")
 
@@ -110,29 +121,39 @@ async def credit_invoice_release_pool(order: Order) -> tuple[int, int]:
 
 
 def alert_hold_failure(order: Order, error: Exception) -> None:
+    set_order_error(
+        order,
+        code=OrderErrorCode.tito_hold_failed,
+        step="Ti.to hold",
+        error=error,
+    )
+    label = order_error_label(OrderErrorCode.tito_hold_failed.value) or "Ti.to hold selhal"
+    body = build_workflow_alert_body(
+        order,
+        step="Ti.to hold",
+        detail=str(error),
+    )
     notify_ops(
-        subject=f"[Fakturovatko] Ti.to hold selhal — objednávka {order.public_id[:8]}",
-        body=(
-            f"Objednávka: {order.public_id}\n"
-            f"E-mail: {order.email}\n"
-            f"Release: {order.tito_release_title} ({order.tito_release_slug})\n"
-            f"Počet: {order.ticket_quantity}\n"
-            f"Allfred proforma id: {order.allfred_proforma_id}\n\n"
-            f"Proforma a e-mail zákazníkovi proběhly; kapacita v Ti.to nebyla snížena.\n"
-            f"Chyba: {error!s}\n\n"
-            f"Vyžaduje manuální zásah."
-        ),
+        subject=f"[Fakturovatko] {label} — objednávka {order.public_id[:8]}",
+        body=body,
     )
 
 
 def alert_workflow_failure(order: Order, step: str, error: Exception) -> None:
+    if not order.error_code:
+        set_order_error(
+            order,
+            code=OrderErrorCode.workflow_unknown,
+            step=step,
+            error=error,
+        )
+    label = order_error_label(order.error_code) or step
+    body = build_workflow_alert_body(
+        order,
+        step=step,
+        detail=str(error),
+    )
     notify_ops(
-        subject=f"[Fakturovatko] {step} selhal — objednávka {order.public_id[:8]}",
-        body=(
-            f"Objednávka: {order.public_id}\n"
-            f"E-mail: {order.email}\n"
-            f"Krok: {step}\n"
-            f"Chyba: {error!s}\n\n"
-            f"Vyžaduje manuální zásah."
-        ),
+        subject=f"[Fakturovatko] {label} — objednávka {order.public_id[:8]}",
+        body=body,
     )

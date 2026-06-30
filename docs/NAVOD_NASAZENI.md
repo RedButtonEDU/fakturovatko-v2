@@ -251,6 +251,35 @@ Labely generuje **Coolify**; často obsahují **Traefik i Caddy** najednou (stej
 
 7. V **Google Workspace Admin** (pokud používáte) ověřte, že účet smí používat danou OAuth aplikaci.
 
+### Admin login (`/admin`)
+
+Admin rozhraní na **`https://invoice.exponentialsummit.cz/admin`** používá **stejný GCP projekt a OAuth klient** jako Gmail (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`), ne RB Universe.
+
+**Google Cloud Console** (projekt Fakturovatko, project number `343335977474`):
+
+1. **APIs & Services → OAuth consent screen** → sekce **Authorized domains**:
+   - `exponentialsummit.cz`
+   - `redbuttonedu.cz`
+   - `redbutton.cz`
+2. **Credentials** → stávající Web klient (`…7muref`) → **Authorized redirect URIs**:
+   - `https://invoice.exponentialsummit.cz/auth/callback`
+   - lokálně: `http://localhost:8000/auth/callback`
+
+**Coolify env (doplnit k existujícím Gmail proměnným):**
+
+| Proměnná | Produkce |
+|----------|----------|
+| `GOOGLE_REDIRECT_URI` | `https://invoice.exponentialsummit.cz/auth/callback` |
+| `PUBLIC_BASE_URL` | `https://invoice.exponentialsummit.cz` |
+| `ALLOWED_DOMAINS` | `redbuttonedu.cz,redbutton.cz` |
+| `SESSION_SECRET` | náhodný řetězec (`openssl rand -hex 32`) |
+| `SESSION_SECURE` | `true` |
+| `SESSION_SAMESITE` | `lax` |
+
+**Bezpečnost:** open-redirect ochrana (`next` parametr), validace `email_verified` z Google, audit log admin akcí, rate limit na `/auth/*` a retry workflow.
+
+Přihlášení: `@redbuttonedu.cz` nebo `@redbutton.cz` — plný admin přístup (bez RBAC rolí).
+
 ### Slovenské IČO, DIČ a IČ DPH (formulář „faktura na firmu“)
 
 - **IČO** (8 číslic) — identifikátor subjektu v obchodnom registri; načítáme z RPO přes veřejné API ŠÚ SR (`api.statistics.sk`).

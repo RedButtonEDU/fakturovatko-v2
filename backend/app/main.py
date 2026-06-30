@@ -5,11 +5,13 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from app import auth
 from app.config import get_settings
 from app.db import Base, engine, migrate_schema
-from app.routers import api_orders, api_public, health, internal
+from app.routers import api_admin, api_orders, api_public, auth as auth_router, health, internal
 from app.security_headers import SecurityHeadersMiddleware
 
 settings = get_settings()
@@ -41,14 +43,26 @@ _trusted = [h.strip() for h in settings.forwarded_trusted_hosts.split(",") if h.
 if _trusted:
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted)
 
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret,
+    session_cookie="fakturovatko_session",
+    max_age=60 * 60 * 24 * 7,
+    same_site=settings.session_samesite,
+    https_only=settings.session_secure,
+)
+
 app.include_router(health.router)
+app.include_router(auth_router.router)
 app.include_router(api_public.router)
 app.include_router(api_orders.router)
+app.include_router(api_admin.router)
 app.include_router(internal.router)
 
 
 @app.on_event("startup")
 def on_startup():
+    auth.register_oauth()
     Base.metadata.create_all(bind=engine)
     migrate_schema()
 

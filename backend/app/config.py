@@ -78,6 +78,19 @@ class Settings(BaseSettings):
     # Čárkou oddělené Allfred id proformy a/nebo invoice_no — považovat za zaplacené i bez paid_at (workaround, když Allfred neumí simulovat úhradu). Po testu smažte.
     allfred_fake_paid_proforma_refs: str = ""
 
+    # Public base URL (admin links, ops alerts, OAuth safe redirect)
+    public_base_url: str = "http://localhost:8000"
+
+    # Admin Google OAuth (same OAuth client as Gmail)
+    google_redirect_uri: Optional[str] = None
+    allowed_domains: str = "redbuttonedu.cz,redbutton.cz"
+    session_secret: str = "change-me-in-production"
+    session_secure: bool = False
+    session_samesite: str = "lax"
+    auth_rate_limit_per_minute: int = 20
+    admin_retry_rate_limit_per_hour: int = 10
+    admin_retry_session_rate_limit_per_hour: int = 30
+
     # Gmail (same pattern as RB Universe)
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
