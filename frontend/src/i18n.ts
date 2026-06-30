@@ -51,6 +51,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     lookup: 'Načíst z ARES',
     lookupRpo: 'Načíst z RPO',
     submit: 'Odeslat objednávku',
+    submitProcessing: 'Odesílám objednávku…',
+    submitProcessingHint:
+      'Vystavujeme zálohovou fakturu a posíláme e-mail — obvykle to trvá několik sekund. Prosíme, nechte stránku otevřenou.',
     lang: 'Jazyk',
     priceWithVat: 's DPH',
     priceWithoutVat: 'bez DPH',
@@ -88,6 +91,9 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     lookup: 'Load from ARES',
     lookupRpo: 'Load from RPO',
     submit: 'Submit order',
+    submitProcessing: 'Submitting your order…',
+    submitProcessingHint:
+      'We are creating your proforma invoice and sending the e-mail — this usually takes a few seconds. Please keep this page open.',
     lang: 'Language',
     priceWithVat: 'incl. VAT',
     priceWithoutVat: 'excl. VAT',

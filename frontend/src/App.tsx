@@ -290,9 +290,10 @@ export default function App() {
             <div className="success-message">{t(lang, 'successMessage')}</div>
           </div>
         ) : (
-          <form className="card form" onSubmit={onSubmit}>
+          <form className="card form" onSubmit={onSubmit} aria-busy={submitting}>
             {err && <div className="alert">{err}</div>}
 
+            <fieldset className="form-fieldset" disabled={submitting}>
             <label>
               {t(lang, 'fullName')}
               <input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
@@ -504,9 +505,24 @@ export default function App() {
                 </fieldset>
               </>
             )}
+            </fieldset>
 
-            <button type="submit" className="hero-btn hero-btn--primary hero-btn--block" disabled={submitting}>
-              <span className="hero-btn-label">{submitting ? '…' : t(lang, 'submit')}</span>
+            {submitting && (
+              <p id="order-submit-status" className="submit-status" role="status" aria-live="polite">
+                {t(lang, 'submitProcessingHint')}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="hero-btn hero-btn--primary hero-btn--block"
+              disabled={submitting}
+              aria-describedby={submitting ? 'order-submit-status' : undefined}
+            >
+              <span className={`hero-btn-label${submitting ? ' hero-btn-label--loading' : ''}`}>
+                {submitting && <span className="hero-btn-spinner" aria-hidden="true" />}
+                {submitting ? t(lang, 'submitProcessing') : t(lang, 'submit')}
+              </span>
             </button>
           </form>
         )}
