@@ -1,4 +1,4 @@
-Subject: [Fakturovatko] Vytvořit finální fakturu — proforma zaplacena ($public_id)
+Subject: [Fakturovatko] Vytvořit finální fakturu — proforma zaplacena
 
 Ahoj,
 
@@ -6,9 +6,11 @@ zákazník zaplatil proformu. Vytvoř prosím finální fakturu v Allfredu k té
 
 $proforma_url
 
-Objednávka: $public_id
-Zákazník: $customer_name <$customer_email>
-Počet vstupenek: $ticket_quantity
-Ti.to voucher (odeslán zákazníkovi): $discount_code
+Počet vstupenek: $ticket_quantity_label
 
-Detail v adminu: $admin_url
+Kontakt na zákazníka:
+Jméno: $customer_name
+E-mail: $customer_email
+Firma: $company_name
+IČ: $company_registration
+Adresa: $billing_address

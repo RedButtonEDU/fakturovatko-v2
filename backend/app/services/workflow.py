@@ -14,7 +14,7 @@ from app.services import allfred as allfred_svc
 from app.services import email as email_svc
 from app.services import pipedrive as pd_svc
 from app.services import tito as tito_svc
-from app.services.ops_links import admin_order_url, allfred_proforma_url
+from app.services.ops_links import allfred_proforma_url
 from app.services.order_errors import OrderErrorCode, clear_order_error, set_order_error
 from app.services.tito_inventory import (
     alert_workflow_failure,
@@ -58,13 +58,13 @@ def _send_manual_final_invoice_request(order: Order, s: Settings, db: Session) -
         proforma_url = f"(mock proforma id={order.allfred_proforma_id or '?'})"
 
     subject, body, body_html = render_manual_final_invoice_request(
-        public_id=order.public_id,
-        customer_name=order.full_name or order.company_name or "?",
+        customer_name=order.full_name or "?",
         customer_email=order.email,
+        company_name=order.company_name if order.invoice_to_company else None,
+        company_registration=order.company_registration if order.invoice_to_company else None,
+        billing_address=billing_address_one_line(order),
         proforma_url=proforma_url,
-        discount_code=order.tito_discount_code or "(chyba)",
         ticket_quantity=order.ticket_quantity,
-        admin_url=admin_order_url(order),
     )
     try:
         email_svc.send_email(recipient, subject, body, body_html=body_html)

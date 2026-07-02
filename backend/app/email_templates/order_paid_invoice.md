@@ -6,11 +6,11 @@ děkujeme za úhradu zálohové faktury k vaší objednávce vstupenek na Expone
 
 Slevový kód na Ti.to: $discount_code
 
-Ve vaší objednávce máte $ticket_quantity_label — při registraci na Ti.to prosím objednejte stejný počet vstupenek.
+Ve vaší objednávce máte $ticket_quantity_label.
 
-Přes něj si můžete vstupenky objednat a poté zaregistrovat účast. Finální fakturu vám zašleme samostatně po jejím vystavení.
+Přes odkaz výše si můžete vstupenky objednat a poté zaregistrovat účast. Finální fakturu vám zašleme samostatně po jejím vystavení.
 
-V případě dotazů prosím kontaktujte Dominika Holíčka: dominik@redbuttonedu.cz.
+V případě dotazů k registraci prosím kontaktujte Lukáše Cypru: lukas@redbuttonedu.cz.
 
 Těšíme se v únoru.
 

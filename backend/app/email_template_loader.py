@@ -72,26 +72,31 @@ def render_order_paid_voucher(*, discount_code: str, ticket_quantity: int) -> tu
     return subject, plain, plain_body_to_html(plain, subject=subject, variant="customer")
 
 
+def _optional_contact_field(value: str | None) -> str:
+    v = (value or "").strip()
+    return v if v else "—"
+
+
 def render_manual_final_invoice_request(
     *,
-    public_id: str,
     customer_name: str,
     customer_email: str,
+    company_name: str | None,
+    company_registration: str | None,
+    billing_address: str,
     proforma_url: str,
-    discount_code: str,
     ticket_quantity: int,
-    admin_url: str,
 ) -> tuple[str, str, str]:
     """E-mail pro ruční vystavení finální faktury (ops / účetní)."""
     subj_t, body_t = _load_parsed("manual_final_invoice_request")
     ctx = {
-        "public_id": public_id,
         "customer_name": customer_name,
         "customer_email": customer_email,
+        "company_name": _optional_contact_field(company_name),
+        "company_registration": _optional_contact_field(company_registration),
+        "billing_address": billing_address or "—",
         "proforma_url": proforma_url,
-        "discount_code": discount_code,
-        "ticket_quantity": str(ticket_quantity),
-        "admin_url": admin_url,
+        "ticket_quantity_label": _ticket_quantity_label(ticket_quantity),
     }
     plain = Template(body_t).substitute(ctx)
     subject = Template(subj_t).substitute(ctx)
