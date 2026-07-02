@@ -41,6 +41,17 @@ def allowed_domain_set() -> set[str]:
     return {d.strip().lower() for d in s.allowed_domains.split(",") if d.strip()}
 
 
+def google_hosted_domain_hint() -> str:
+    """Google `hd` accepts a single domain; with multiple allowed domains use '*'.
+
+    Server-side validate_domain still enforces the full allowlist.
+    """
+    domains = allowed_domain_set()
+    if len(domains) == 1:
+        return next(iter(domains))
+    return "*"
+
+
 def normalize_email(email: str) -> str:
     return (email or "").strip().lower()
 

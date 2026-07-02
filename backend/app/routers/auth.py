@@ -80,7 +80,7 @@ async def login(request: Request):
     return await auth.oauth.google.authorize_redirect(
         request,
         redirect_uri,
-        hd="redbuttonedu.cz",
+        hd=auth.google_hosted_domain_hint(),
     )
 
 
